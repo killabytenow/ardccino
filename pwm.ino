@@ -31,7 +31,7 @@ void enable_interrupts(void)
   sei();
   SREG = sreg;
 }
-  
+
 unsigned int (*timerHandler)(void) = NULL;
 
 void timerSetHandler(unsigned int (*th)(void))
@@ -150,21 +150,6 @@ void timerSetInterruptFrequency(int timer,
 
 unsigned lat;
 
-/*
-ISR(TIMER1_OVF_vect)
-{
-  // Capture the current timer value (TCTNx) (this is how much error we have
-  // due to interrupt latency and the work in this function). Then add the
-  // next scheduled action.
-  // For more info, see http://www.uchobby.com/index.php/2007/11/24/arduino-interrupts/
-  if(timerHandler) {
-    unsigned x = timerHandler();
-    lat = TCNT1;
-    TCNT1 = lat + x;
-  }
-}
-*/
-
 ///////////////////////////////////////////////////////////////////////////////
 // BOOSTER CONFIG
 ///////////////////////////////////////////////////////////////////////////////
@@ -245,8 +230,6 @@ struct pwmOutput_struct {
 #define PWM_OUTPUT_ACCEL          7
 #define PWM_OUTPUT_MAX_ACCEL      40
 
-int pwmOutputSelected = 0;
-
 void pwmSetup(void)
 {
   unsigned char sreg;
@@ -263,7 +246,7 @@ void pwmSetup(void)
          | 0b00001000;  // Fast PWM 8-bit (!WGM13, WGM12)
   OCR1A = OCR1B = 0;    // set compare registers to 0
   TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
-         
+
   // timer 2
   TCCR2A = (TCCR2A & 0b00001100)
          | 0b00000011;  // Fast PWM (WGM21, WGM20)
@@ -382,54 +365,114 @@ void pwmPrintStatus(int sp)
 }
 
 
-void pwmSelect(int d)
+void pwmAccelerate(int ps, int v)
 {
-  if(d < 0) {
-    if(pwmOutputSelected > 0)
-      pwmOutputSelected--;
-  } else {
-    if(pwmOutputSelected + 1 < PWM_OUTPUT_N)
-      pwmOutputSelected++;
-  }
-
-  Serial.print("Selected PWM output [");
-  Serial.print(pwmOutputSelected);  
-  Serial.println("]");
-}
-
-#define pwmSelectPrevious() pwmSelect(-1)
-#define pwmSelectNext()     pwmSelect(1)
-
-void pwmAccelerate(int v)
-{
-  pwmOutput[pwmOutputSelected].pwmValTarget =
+  if(ps < 0 || ps > BOOSTER_N)
+    fatal("pwmAccelerate: pwm out of bounds.");
+    
+  pwmOutput[ps].pwmValTarget =
           v > 0
-              ? (pwmOutput[pwmOutputSelected].pwmValTarget + v < PWM_OUTPUT_MAX
-                  ? pwmOutput[pwmOutputSelected].pwmValTarget + v
+              ? (pwmOutput[ps].pwmValTarget + v < PWM_OUTPUT_MAX
+                  ? pwmOutput[ps].pwmValTarget + v
                   : PWM_OUTPUT_MAX)
-              : (pwmOutput[pwmOutputSelected].pwmValTarget + v > -PWM_OUTPUT_MAX
-                  ? pwmOutput[pwmOutputSelected].pwmValTarget + v
+              : (pwmOutput[ps].pwmValTarget + v > -PWM_OUTPUT_MAX
+                  ? pwmOutput[ps].pwmValTarget + v
                   : -PWM_OUTPUT_MAX);
 }
 
 void pwmStop(int sp)
 {
   if(sp < 0 || sp > PWM_OUTPUT_N)
-    fatal("Bad pwm output selected in pwmStop()");
+    fatal("pwmStop: pwm out of bounds");
 
   pwmOutput[sp].pwmValTarget = 0;
 }
 
-#define pwmStopEmergency() pwmStop(-1)
-#define pwmStopCurrent()   pwmStop(pwmOutputSelected)
-
-void pwmSwitchDirection()
+void pwmSwitchDirection(int ps)
 {
-  pwmOutput[pwmOutputSelected].pwmValTarget = 0 - pwmOutput[pwmOutputSelected].pwmValTarget;
+  if(ps < 0 || ps > BOOSTER_N)
+    fatal("pwmSwitchDirection: pwm out of bounds.");
+    
+  pwmOutput[ps].pwmValTarget = 0 - pwmOutput[ps].pwmValTarget;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// JOYSTCICK
+// DCC
+///////////////////////////////////////////////////////////////////////////////
+
+void dccSetup(void)
+{
+  unsigned char sreg;
+  
+  disable_interrupts();
+
+  //-------------------------------------------
+  // TURN OFF ALL TIMER 1 OUTPUTS
+  TCCR1A = (TCCR1A & 0b00001100)
+         | 0b00000000   // Normal mode (!WGM11, WGM10)
+         | 0b00000000   // OC1A disconnected
+         | 0b00000000;  // OC1B disconnected
+  TCCR1B = (TCCR1B & 0b11100000)
+         | 0x2          // clock prescaler 0x01 (16e6/8 = 2 Mhz)
+         | 0b00000000;  // Normal mode (!WGM13, WGM12)
+  OCR1A = OCR1B = 0;    // set compare registers to 0
+  TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
+           
+  //-------------------------------------------
+  // ENABLE TIMER 2 OUTPUTS AS DCC OUTPUT (Pins 3 and 11)
+  TCCR2A = (TCCR2A & 0b00001100)
+         | 0b00000011;  // Fast PWM (WGM21, WGM20)
+  TCCR2B = (TCCR2B & 0b11110000)
+         | 0x6          // clock prescaler 0x6 (16e6/256 = 62.5 khz)
+         | 0b00000000;  // Fast PWM (!WGM22)
+  OCR2A = OCR2B = 0;    // set compare registers to 0
+  TIMSK2 &= 0b11111000; // disable all timer 2 interrupts
+  
+  //-------------------------------------------
+  // CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
+  for(int b = 0; b < BOOSTER_N; b++) {
+    switch(booster[b].pwmSignalPin) {
+      case 9:
+        TCCR1A |= 0b10000000; // Clear OCR1A on compare match
+        break;
+      case 10:
+        break;
+      case 11:
+        TCCR2A |= 0b10000000; // Clear OCR2A on compare match
+        break;
+      case 3:
+        TCCR2A |= 0b00100000; // Clear OCR2B on compare match
+        break;
+      default:
+        fatal("Cannot configure output pin for PWM output");
+    }
+  }
+
+  //-------------------------------------------
+  // RESET PWM STATUS
+  for(int i = 0; i < BOOSTER_N; i++) {
+    memset(pwmOutput + i, 0, sizeof(struct pwmOutput_struct));
+    pwmOutput[i].pwmMode = PWM_OUTPUT_MODE_INERTIAL;
+  }
+
+  enable_interrupts();
+}
+
+ISR(TIMER1_OVF_vect)
+{
+  // Capture the current timer value (TCTNx) (this is how much error we have
+  // due to interrupt latency and the work in this function). Then add the
+  // next scheduled action.
+  // For more info, see http://www.uchobby.com/index.php/2007/11/24/arduino-interrupts/
+  if(timerHandler) {
+    unsigned x = timerHandler();
+    lat = TCNT1;
+    TCNT1 = lat + x;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// JOYSTICK
 ///////////////////////////////////////////////////////////////////////////////
 
 const int joyAxisXPin  = A0;
@@ -456,6 +499,8 @@ int joyStatusOld = 0;
 #define joyMoveLeft()      joyMove(JOY_LEFT)
 #define joyMoveRight()     joyMove(JOY_RIGHT)
 
+#define joyPressedUp()     joyPressed(JOY_UP)
+#define joyPressedDown()   joyPressed(JOY_DOWN)
 #define joyPressedLeft()   joyPressed(JOY_LEFT)
 #define joyPressedRight()  joyPressed(JOY_RIGHT)
 #define joyPressedButton() joyPressed(JOY_BUTTON)
@@ -500,6 +545,238 @@ int joyRead()
   //joyPrint();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// ANSI
+///////////////////////////////////////////////////////////////////////////////
+
+void ansi_cls(void)
+{
+  Serial.print("\x1B[1J");
+  Serial.print("\x1B[1;1f");
+}
+
+void ansi_goto(int x, int y)
+{
+  Serial.print("\x1B[");
+  Serial.print(y);
+  Serial.print(';');
+  Serial.print(x);
+  Serial.print('f');
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// INTERFACE
+///////////////////////////////////////////////////////////////////////////////
+
+// GENERIC UI SCREEN
+struct ui_screen {
+  struct ui_screen *(*on_event)(struct ui_screen *ui, int event);
+  int focus;
+};
+
+#define UI_EVENT_IDLE           0
+#define UI_EVENT_OPEN           1
+#define UI_EVENT_CLOSE          2
+#define UI_EVENT_LEFT           11
+#define UI_EVENT_RIGHT          12
+#define UI_EVENT_UP             13
+#define UI_EVENT_DOWN           14
+#define UI_EVENT_PRESSED_LEFT   15
+#define UI_EVENT_PRESSED_RIGHT  16
+#define UI_EVENT_PRESSED_UP     17
+#define UI_EVENT_PRESSED_DOWN   18
+#define UI_EVENT_SELECT         20
+
+// GLOBAL HANDLER
+struct ui_screen *ui_curr = NULL;
+
+void uiHandler(void)
+{
+  struct ui_screen *next_ui;
+  
+  // open UI if not opened yet
+  if(!ui_curr->focus) {
+    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_OPEN);
+    ui_curr->focus = 1;
+    if(next_ui)
+      fatal("ui_handler: fast close");
+  }
+
+  // get joystick events
+  joyRead();
+  if(joyPressedButton())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_SELECT);
+  else if(joyPressedUp())    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_UP);
+  else if(joyPressedDown())  next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_DOWN);
+  else if(joyPressedLeft())  next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_LEFT);
+  else if(joyPressedRight()) next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_RIGHT);
+  else if(joyMoveUp())       next_ui = ui_curr->on_event(ui_curr, UI_EVENT_UP);
+  else if(joyMoveDown())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_DOWN);
+  else if(joyMoveLeft())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_LEFT);
+  else if(joyMoveRight())    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_RIGHT);
+  else
+    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_IDLE);
+  
+  // ignore keys
+  while(Serial.available() > 0) {
+    Serial.print(Serial.read());
+  }
+  
+  if(next_ui && next_ui != ui_curr) {
+    if(ui_curr->on_event(ui_curr, UI_EVENT_CLOSE))
+      fatal("handle_ui: close event cannot set next_ui");
+    ui_curr->focus = 0;
+    ui_curr = next_ui;
+  }
+}
+
+// GLOBAL OPTIONS SCREEN
+struct ui_config_global_struct {
+  ui_screen base;
+  int       current;
+  int       mode_pwm;
+} ui_config_global = { { (ui_screen *(*)(ui_screen *, int)) ui_config_global_evh, 0 }, 0 };
+
+// PWM SCREEN
+struct ui_pwm_struct {
+  ui_screen base;
+  int       current_pwm;
+} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
+
+
+void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
+{
+  int i;
+  
+  if(cls) {
+    ansi_cls();
+    Serial.print("CONFIG\r\n======\r\n\r\n");
+  }
+  ansi_goto(1, 4);
+
+  Serial.print(ui->current == 0 ? ">> " : "   ");
+  Serial.print("Signal mode\t<");
+  Serial.print(ui->mode_pwm ? "PWM" : "DCC");
+  Serial.print(">   \r\n");
+  Serial.print("\r\n");
+  Serial.print(ui->current == 1 ? ">> " : "   ");
+  Serial.print("RETURN");
+  Serial.print("\r\n");
+}
+
+struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int event)
+{
+  switch(event) {
+    case UI_EVENT_PRESSED_UP:
+      if(ui->current > 0) {
+        ui->current--;
+        ui_config_global_draw(ui, 0);
+      }
+      break;
+      
+    case UI_EVENT_PRESSED_DOWN:
+      if(ui->current < 1) {
+        ui->current++;
+        ui_config_global_draw(ui, 0);
+      }
+      break;
+      
+    case UI_EVENT_PRESSED_LEFT:
+    case UI_EVENT_PRESSED_RIGHT:
+    case UI_EVENT_SELECT:
+      switch(ui->current) {
+        case 0:
+          ui->mode_pwm = !ui->mode_pwm;
+          break;
+        
+        case 1:
+          if(event != UI_EVENT_SELECT)
+            break;
+          return ui->mode_pwm ? (struct ui_screen *) &ui_pwm : NULL;
+      }
+      ui_config_global_draw(ui, 0);
+      break;
+        
+    case UI_EVENT_OPEN:
+      ui_config_global_draw(ui, 1);
+      break;
+      
+    case UI_EVENT_CLOSE:
+      ansi_cls();
+      break;
+  }
+  
+  
+  
+  return NULL;
+}
+
+void ui_pwm_draw(struct ui_pwm_struct *ui, int cls)
+{
+  int i;
+  
+  if(cls) {
+    ansi_cls();
+    Serial.print("PWM POWER\r\n=========\r\n\r\n");
+  }
+  ansi_goto(1, 4);
+
+  for(i = 0; i < BOOSTER_N; i++) {
+    Serial.print(ui->current_pwm == i ? ">> " : "   ");
+    Serial.print(booster[i].name);
+    Serial.print("\t<");
+    Serial.print(pwmOutput[i].pwmValCurrent);
+    Serial.print(">   \r\n");
+  }
+  Serial.print("\r\n");
+  Serial.print(ui->current_pwm == i ? ">> " : "   ");
+  Serial.print("CONFIG MENU");
+  Serial.print("\r\n");
+}
+
+struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
+{
+  switch(event) {
+    case UI_EVENT_UP:
+      if(ui->current_pwm < BOOSTER_N)
+        pwmAccelerate(ui->current_pwm, 10);
+      break;
+      
+    case UI_EVENT_DOWN:
+      if(ui->current_pwm < BOOSTER_N)
+        pwmAccelerate(ui->current_pwm, -10);
+      break;
+      
+    case UI_EVENT_PRESSED_LEFT:
+      if(ui->current_pwm > 0)
+        ui->current_pwm--;
+      break;
+      
+    case UI_EVENT_PRESSED_RIGHT:
+      if(ui->current_pwm < BOOSTER_N)
+        ui->current_pwm++;
+      break;
+
+    case UI_EVENT_SELECT:
+      if(ui->current_pwm < BOOSTER_N)
+        pwmStop(ui->current_pwm);
+      else
+        return (struct ui_screen *) &ui_config_global;
+      break;
+        
+    case UI_EVENT_OPEN:
+      ui_pwm_draw(ui, 1);
+      break;
+      
+    case UI_EVENT_CLOSE:
+      ansi_cls();
+      break;
+  }
+  
+  ui_pwm_draw(ui, 0);
+  
+  return NULL;
+}
+
 void setup()
 {
   int i;
@@ -509,31 +786,14 @@ void setup()
   boosterSetup();
   joySetup();
   pwmSetup();
+  
+  ui_curr = (struct ui_screen *) &ui_pwm;
 }
 
 
 void loop()
 {
-  joyRead();
-  
-  if(joyPressedButton()) {
-    //pwmSwitchDirection();
-    pwmStopCurrent();
-    //pwmStopEmergency();
-  } else
-  if(joyMoveUp()) {
-    pwmAccelerate(10);
-  } else
-  if(joyMoveDown()) {
-    pwmAccelerate(-10);
-  } else
-  if(joyPressedLeft()) {
-    pwmSelectPrevious();
-  } else
-  if(joyPressedRight()) {
-    pwmSelectNext();
-  }
-  
+  uiHandler();
   pwmRefresh();
   
   delay(100);
