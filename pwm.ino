@@ -593,6 +593,8 @@ struct ui_screen *ui_curr = NULL;
 void uiHandler(void)
 {
   struct ui_screen *next_ui;
+  static int last_key = 0;
+  int event, k;
   
   // open UI if not opened yet
   if(!ui_curr->focus) {
@@ -604,22 +606,42 @@ void uiHandler(void)
 
   // get joystick events
   joyRead();
-  if(joyPressedButton())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_SELECT);
-  else if(joyPressedUp())    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_UP);
-  else if(joyPressedDown())  next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_DOWN);
-  else if(joyPressedLeft())  next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_LEFT);
-  else if(joyPressedRight()) next_ui = ui_curr->on_event(ui_curr, UI_EVENT_PRESSED_RIGHT);
-  else if(joyMoveUp())       next_ui = ui_curr->on_event(ui_curr, UI_EVENT_UP);
-  else if(joyMoveDown())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_DOWN);
-  else if(joyMoveLeft())     next_ui = ui_curr->on_event(ui_curr, UI_EVENT_LEFT);
-  else if(joyMoveRight())    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_RIGHT);
-  else
-    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_IDLE);
-  
-  // ignore keys
-  while(Serial.available() > 0) {
-    Serial.print(Serial.read());
+  event = UI_EVENT_IDLE;
+  if(joyPressedButton())     event = UI_EVENT_SELECT;
+  else if(joyPressedUp())    event = UI_EVENT_PRESSED_UP;
+  else if(joyPressedDown())  event = UI_EVENT_PRESSED_DOWN;
+  else if(joyPressedLeft())  event = UI_EVENT_PRESSED_LEFT;
+  else if(joyPressedRight()) event = UI_EVENT_PRESSED_RIGHT;
+  else if(joyMoveUp())       event = UI_EVENT_UP;
+  else if(joyMoveDown())     event = UI_EVENT_DOWN;
+  else if(joyMoveLeft())     event = UI_EVENT_LEFT;
+  else if(joyMoveRight())    event = UI_EVENT_RIGHT;
+    
+  // get keys
+  k = 0;
+  if(Serial.available() > 0) {
+    int c;
+    if((c = Serial.read()) == 27
+    && (c = Serial.read()) == 91)
+    { // escape char
+      k = Serial.read() | 0x1000;
+      switch(k) {
+        case 66 | 0x1000: event = last_key == k ? UI_EVENT_DOWN  : UI_EVENT_PRESSED_DOWN;  break;
+        case 65 | 0x1000: event = last_key == k ? UI_EVENT_UP    : UI_EVENT_PRESSED_UP;    break;
+        case 68 | 0x1000: event = last_key == k ? UI_EVENT_LEFT  : UI_EVENT_PRESSED_LEFT;  break;
+        case 67 | 0x1000: event = last_key == k ? UI_EVENT_RIGHT : UI_EVENT_PRESSED_RIGHT; break;
+        //default:
+          //Serial.print("escape => "); Serial.print(k & 0xff);
+      }
+    } else {
+      if(c == 13) {
+        event = UI_EVENT_SELECT;
+      }
+    }
   }
+  last_key = k;
+  
+  next_ui = ui_curr->on_event(ui_curr, event);
   
   if(next_ui && next_ui != ui_curr) {
     if(ui_curr->on_event(ui_curr, UI_EVENT_CLOSE))
@@ -633,7 +655,7 @@ void uiHandler(void)
 struct ui_config_global_struct {
   ui_screen base;
   int       current;
-  int       mode_pwm;
+  int       mode; // 0 = off, 1 = pwm, 2 = dcc
 } ui_config_global = { { (ui_screen *(*)(ui_screen *, int)) ui_config_global_evh, 0 }, 0 };
 
 // PWM SCREEN
@@ -655,7 +677,7 @@ void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 
   Serial.print(ui->current == 0 ? ">> " : "   ");
   Serial.print("Signal mode\t<");
-  Serial.print(ui->mode_pwm ? "PWM" : "DCC");
+  Serial.print(ui->mode == 1 ? "PWM" : ui->mode == 2 ? "DCC" : "off");
   Serial.print(">   \r\n");
   Serial.print("\r\n");
   Serial.print(ui->current == 1 ? ">> " : "   ");
@@ -685,13 +707,19 @@ struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int e
     case UI_EVENT_SELECT:
       switch(ui->current) {
         case 0:
-          ui->mode_pwm = !ui->mode_pwm;
+          ui->mode += event == UI_EVENT_PRESSED_LEFT ? -1 : 1;
+          if(ui->mode < 0) ui->mode = 2;
+          ui->mode = ui->mode % 3;
           break;
         
         case 1:
           if(event != UI_EVENT_SELECT)
             break;
-          return ui->mode_pwm ? (struct ui_screen *) &ui_pwm : NULL;
+          switch(ui->mode) {
+            case 0: return NULL;
+            case 1: return (struct ui_screen *) &ui_pwm;
+            case 2: return NULL;
+          }
       }
       ui_config_global_draw(ui, 0);
       break;
@@ -704,8 +732,6 @@ struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int e
       ansi_cls();
       break;
   }
-  
-  
   
   return NULL;
 }
@@ -724,7 +750,7 @@ void ui_pwm_draw(struct ui_pwm_struct *ui, int cls)
     Serial.print(ui->current_pwm == i ? ">> " : "   ");
     Serial.print(booster[i].name);
     Serial.print("\t<");
-    Serial.print(pwmOutput[i].pwmValCurrent);
+    Serial.print(((float) pwmOutput[i].pwmValCurrent) * 100.0 / ((float) PWM_OUTPUT_MAX));
     Serial.print(">   \r\n");
   }
   Serial.print("\r\n");
@@ -735,25 +761,32 @@ void ui_pwm_draw(struct ui_pwm_struct *ui, int cls)
 
 struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
 {
+  int redraw = 0;
+  static int refresh = 0;
+  
   switch(event) {
-    case UI_EVENT_UP:
-      if(ui->current_pwm < BOOSTER_N)
-        pwmAccelerate(ui->current_pwm, 10);
-      break;
-      
-    case UI_EVENT_DOWN:
+    case UI_EVENT_LEFT:
       if(ui->current_pwm < BOOSTER_N)
         pwmAccelerate(ui->current_pwm, -10);
       break;
       
-    case UI_EVENT_PRESSED_LEFT:
-      if(ui->current_pwm > 0)
-        ui->current_pwm--;
+    case UI_EVENT_RIGHT:
+      if(ui->current_pwm < BOOSTER_N)
+        pwmAccelerate(ui->current_pwm, 10);
       break;
       
-    case UI_EVENT_PRESSED_RIGHT:
-      if(ui->current_pwm < BOOSTER_N)
+    case UI_EVENT_PRESSED_UP:
+      if(ui->current_pwm > 0) {
+        ui->current_pwm--;
+        redraw = 1;
+      }
+      break;
+      
+    case UI_EVENT_PRESSED_DOWN:
+      if(ui->current_pwm < BOOSTER_N) {
         ui->current_pwm++;
+        redraw = 1;
+      }
       break;
 
     case UI_EVENT_SELECT:
@@ -772,8 +805,16 @@ struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
       break;
   }
   
-  ui_pwm_draw(ui, 0);
+  for(int i = 0; !redraw && i < BOOSTER_N; i++)
+    redraw = pwmOutput[i].pwmValCurrent != pwmOutput[i].pwmValTarget;
+  refresh++;
+  redraw |= (refresh == 10);
   
+  if(redraw) {
+    refresh = 0;
+    ui_pwm_draw(ui, 0);
+  }
+
   return NULL;
 }
 
@@ -793,8 +834,8 @@ void setup()
 
 void loop()
 {
-  uiHandler();
   pwmRefresh();
+  uiHandler();
   
   delay(100);
 }
