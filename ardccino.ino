@@ -6,7 +6,7 @@
 
 void fatal(char *msg)
 {
-  boosterEmergencyStop(-1);
+  boosterEmergencyStop();
   Serial.print("FATAL ERROR");
   if(msg) {
     Serial.print(": ");
@@ -31,124 +31,6 @@ void enable_interrupts(void)
   sei();
   SREG = sreg;
 }
-
-unsigned int (*timerHandler)(void) = NULL;
-
-void timerSetHandler(unsigned int (*th)(void))
-{
-  timerHandler = th;
-}
-
-unsigned int timerGetMaxCount(int timer)
-{
-  return timer == 0 || timer == 2 ? 255 : 65535;
-}
-
-// For PWM use:
-//   - Pins 5 and 6 are paired on timer0
-//   - Pins 9 and 10 are paired on timer1
-//   - Pins 3 and 11 are paired on timer2
-void timerSetModePrescaler(int timer, int mode, int prescaler, unsigned int first_cycle)
-{
-  switch(timer) {
-    case 0:
-      fatal("timer#0 is not configurable");
-      break;
-      
-    case 1:
-      TCCR1A = 0;
-      TCCR1B = (TCCR1B & 0b11111000) | prescaler;
-      TCNT1 = first_cycle;
-      TIMSK1 = 1 << TOIE1;
-      break;
-
-    case 2:
-      TCCR2A = 0;
-      TCCR2B = (TCCR2B & 0b11111000) | prescaler;
-      TCNT2 = first_cycle;
-      TIMSK2 = 1 << TOIE2;
-      break;
-
-    default:
-      fatal("Bad timer selected");
-  }
-}
-
-void timerSetSlowest(int timer, int mode)
-{
-  switch(timer) {
-    case 0:
-      fatal("timer#0 is not configurable");
-      break;
-      
-    case 1:
-      timerSetModePrescaler(timer, mode, 5, 0);
-      break;
-
-    case 2:
-      timerSetModePrescaler(timer, mode, 7, 0);
-      break;
-
-    default:
-      fatal("Bad timer selected");
-  }
-}
-
-void timerSetInterruptFrequency(int timer,
-                               float timeoutFrequency,
-                               unsigned int *counter_base,
-                               unsigned int *counter_max)
-{
-  float freqs01[] = { 1, 8, 64, 256, 1024, 0.0 };
-  float freqs2[]  = { 1, 8, 32, 64, 128, 256, 1024, 0.0 };
-  float *freqs, counter, counter_size;
-  
-  // some input params checks
-  if(timer < 0 || timer > 2)
-    fatal("Invalid timer");
-  if(!counter_base)
-    fatal("NULL counter_base");
-  if(!counter_max)
-    fatal("NULL counter_max");
-  
-  // select prescaled frequency table and get counter_max
-  freqs = timer == 2 ? freqs2 : freqs01;
-  for(int i; freqs[i] != 0; i++)
-    freqs[i] = ((float) F_CPU) / freqs[i];
-  *counter_max = timerGetMaxCount(timer);
-  
-  Serial.print("timeoutFrequency ");
-    Serial.print(timeoutFrequency);
-    Serial.print(" on timer ");
-    Serial.println(timer);
-    
-  for(int prescaler = 0; freqs[prescaler] != 0.0; prescaler++) {
-    counter = freqs[prescaler] / timeoutFrequency;
-    Serial.print("counter = "); Serial.println(counter);
-    if(counter < 1.0)
-      fatal("ERROR: Cannot give so high res :(");
-    if(counter <= (float) *counter_max) {
-      *counter_base = (unsigned int) ((((float) *counter_max) - counter) + 0.5); //the 0.5 is for rounding;
-      
-      Serial.print("timerSetInterruptFrequency: Using prescaler");
-        Serial.print(prescaler + 1);
-        Serial.print(" (f=");
-        Serial.print(freqs[prescaler]);
-        Serial.print(") using counter (");
-        Serial.print(*counter_base);
-        Serial.println(")");
-
-      // Mode 0 (normal), using selected prescaler
-      timerSetModePrescaler(timer, 0, prescaler + 1, *counter_base);
-      return;
-    }
-  }
-  
-  // cannot find a suitable prescaler
-  fatal("Cannot find a suitable prescaler :(");
-}
-
-unsigned lat;
 
 ///////////////////////////////////////////////////////////////////////////////
 // BOOSTER CONFIG
@@ -175,7 +57,20 @@ struct booster_struct {
 //  { "booster#4", xx, xx,  xx, xx, BOOSTER_STATUS_OK },
 };
 
-#define BOOSTER_N ((sizeof(booster)) / (sizeof(struct booster_struct)))
+struct booster_mngr_struct {
+  char *name;
+  void (*init)(void);
+  void (*fini)(void);
+  void (*refresh)(void);
+} booster_mngr[] = {
+  { "off", offStart, offStop, offRefresh },
+  { "PWM", pwmStart, pwmStop, pwmRefresh },
+  { "DCC", dccStart, dccStop, dccRefresh },
+};
+int booster_mngr_selected = 0;
+
+#define BOOSTER_N      ((sizeof(booster)) / (sizeof(struct booster_struct)))
+#define BOOSTER_MNGR_N ((sizeof(booster_mngr)) / (sizeof(struct booster_mngr_struct)))
 
 void boosterSetup(void)
 {
@@ -196,19 +91,36 @@ void boosterSetup(void)
   }
 }
 
-void boosterEmergencyStop(int b)
+void boosterEmergencyStop()
 {
-  if(b > (int) BOOSTER_N)
-    fatal("Out of bounds booster.");
+  Serial.println("Booster emergency stop!");
+  
+  // finish current booster manager
+  booster_mngr[booster_mngr_selected].fini();
+  
+  // select OFF
+  booster_mngr_selected = 0;
+  booster_mngr[booster_mngr_selected].init();
+}
 
-  if(b < 0) {
-    Serial.println("Booster emergency stop!");
-    for(int i = 0; i < BOOSTER_N; i++)
-      boosterEmergencyStop(i);
-  } else {
+///////////////////////////////////////////////////////////////////////////////
+// OFF
+///////////////////////////////////////////////////////////////////////////////
+
+void offStart(void)
+{
+  for(int b = 0; b < BOOSTER_N; b++) {
     digitalWrite(booster[b].pwmSignalPin, LOW);
     digitalWrite(booster[b].dirSignalPin, LOW);
   }
+}
+
+void offStop(void)
+{
+}
+
+void offRefresh(void)
+{
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -230,14 +142,11 @@ struct pwmOutput_struct {
 #define PWM_OUTPUT_ACCEL          7
 #define PWM_OUTPUT_MAX_ACCEL      40
 
-void pwmSetup(void)
+void pwmStart(void)
 {
-  unsigned char sreg;
-  
-  //-------------------------------------------
-  // CONFIGURE TIMERS
   disable_interrupts();
 
+  // CONFIGURE TIMERS
   // timer 1
   TCCR1A = (TCCR1A & 0b00001100)
          | 0b00000001;  // Fast PWM 8-bit (!WGM11, WGM10)
@@ -256,24 +165,14 @@ void pwmSetup(void)
   OCR2A = OCR2B = 0;    // set compare registers to 0
   TIMSK2 &= 0b11111000; // disable all timer 2 interrupts
   
-  //-------------------------------------------
   // CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
   for(int b = 0; b < BOOSTER_N; b++) {
     switch(booster[b].pwmSignalPin) {
-      case 9:
-        TCCR1A |= 0b10000000; // Clear OCR1A on compare match
-        break;
-      case 10:
-        TCCR1A |= 0b00100000; // Clear OCR1B on compare match
-        break;
-      case 11:
-        TCCR2A |= 0b10000000; // Clear OCR2A on compare match
-        break;
-      case 3:
-        TCCR2A |= 0b00100000; // Clear OCR2B on compare match
-        break;
-      default:
-        fatal("Cannot configure output pin for PWM output");
+      case 9:  TCCR1A |= 0b10000000; break; // Clear OC1A on cmp match
+      case 10: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
+      case 11: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
+      case 3:  TCCR2A |= 0b00100000; break; // Clear OC2B on cmp match
+      default: fatal("Cannot configure output pin for PWM output");
     }
   }
 
@@ -283,6 +182,19 @@ void pwmSetup(void)
     memset(pwmOutput + i, 0, sizeof(struct pwmOutput_struct));
     pwmOutput[i].pwmMode = PWM_OUTPUT_MODE_INERTIAL;
   }
+
+  enable_interrupts();
+}
+
+void pwmStop(void)
+{
+  disable_interrupts();
+
+  // disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+  TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
+  TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
+  OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
+  TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
 
   enable_interrupts();
 }
@@ -400,75 +312,193 @@ void pwmSwitchDirection(int ps)
 // DCC
 ///////////////////////////////////////////////////////////////////////////////
 
-void dccSetup(void)
+void dccStart(void)
 {
   unsigned char sreg;
   
   disable_interrupts();
 
-  //-------------------------------------------
-  // TURN OFF ALL TIMER 1 OUTPUTS
+  // CONFIGURE TIMER 1
   TCCR1A = (TCCR1A & 0b00001100)
-         | 0b00000000   // Normal mode (!WGM11, WGM10)
-         | 0b00000000   // OC1A disconnected
-         | 0b00000000;  // OC1B disconnected
+         | 0b00000000     // CTC  mode (!WGM11, !WGM10)
+         | 0b00000000     // OC1A disconnected
+         | 0b00000000;    // OC1B disconnected
   TCCR1B = (TCCR1B & 0b11100000)
-         | 0x2          // clock prescaler 0x01 (16e6/8 = 2 Mhz)
-         | 0b00000000;  // Normal mode (!WGM13, WGM12)
-  OCR1A = OCR1B = 0;    // set compare registers to 0
-  TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
+         | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
+         | 0b00001000;    // Normal mode (!WGM13, WGM12)
+  OCR1B = 0;      // set compare registers to 0
+  OCR1A = 200;
+  TIMSK1 = (TIMSK1 & 0b11011000)
+         | (1 << OCIE1A); // output cmp A match interrupt enable
            
-  //-------------------------------------------
-  // ENABLE TIMER 2 OUTPUTS AS DCC OUTPUT (Pins 3 and 11)
-  TCCR2A = (TCCR2A & 0b00001100)
-         | 0b00000011;  // Fast PWM (WGM21, WGM20)
-  TCCR2B = (TCCR2B & 0b11110000)
-         | 0x6          // clock prescaler 0x6 (16e6/256 = 62.5 khz)
-         | 0b00000000;  // Fast PWM (!WGM22)
-  OCR2A = OCR2B = 0;    // set compare registers to 0
-  TIMSK2 &= 0b11111000; // disable all timer 2 interrupts
-  
-  //-------------------------------------------
-  // CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
-  for(int b = 0; b < BOOSTER_N; b++) {
-    switch(booster[b].pwmSignalPin) {
-      case 9:
-        TCCR1A |= 0b10000000; // Clear OCR1A on compare match
-        break;
-      case 10:
-        break;
-      case 11:
-        TCCR2A |= 0b10000000; // Clear OCR2A on compare match
-        break;
-      case 3:
-        TCCR2A |= 0b00100000; // Clear OCR2B on compare match
-        break;
-      default:
-        fatal("Cannot configure output pin for PWM output");
-    }
-  }
+  // DISABLE TIMER 2
+  TCCR2A = TCCR2A & 0b00001100;
+  TCCR2B = TCCR2B & 0b11110000;
+  OCR2A = OCR2B = 0;
+  TIMSK2 &= 0b11111000;
+
+  // SET PWM OUTPUTS TO 1
+  for(int b = 0; b < BOOSTER_N; b++)
+    digitalWrite(booster[b].pwmSignalPin, 1);
 
   //-------------------------------------------
-  // RESET PWM STATUS
-  for(int i = 0; i < BOOSTER_N; i++) {
-    memset(pwmOutput + i, 0, sizeof(struct pwmOutput_struct));
-    pwmOutput[i].pwmMode = PWM_OUTPUT_MODE_INERTIAL;
-  }
+  // RESET DCC STATUS
+  // TODO
 
   enable_interrupts();
 }
 
-ISR(TIMER1_OVF_vect)
+void dccStop(void)
+{
+  disable_interrupts();
+
+  // disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+  TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
+  TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
+  OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
+  TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
+
+  enable_interrupts();
+}
+
+void dccRefresh(void)
+{
+}
+
+#define DCC_MSG_MAX           5
+#define DCC_BUFFER_POOL_BITS  5
+#define DCC_BUFFER_POOL_MASK  ((char) ~(0xff << DCC_BUFFER_POOL_BITS))
+#define DCC_BUFFER_POOL_SIZE  (1 << DCC_BUFFER_POOL_BITS)
+
+struct dcc_buffer_struct {
+  byte msg[DCC_MSG_MAX];
+  unsigned int  address;
+//unsigned int command;
+  unsigned char len;
+  char reps;
+} dcc_buffer_pool[DCC_BUFFER_POOL_SIZE];
+
+struct dcc_buffer_struct *dccSendBuffer(byte *msg, unsigned char len)
+{
+  unsigned int address, command;
+  byte *n, x;
+  struct dcc_buffer_struct *selected_buffer;
+  
+  if(len < 2)
+    fatal("Message too short");
+  if(len >= DCC_MSG_MAX)
+    fatal("Message too long");
+  
+  // extract address
+  n = msg;
+  address = *n++; // enough for 7-bit address, or broadcast (0x00) or idle packets (0xff)
+  if(address & 0x80 && address != 0xff) {
+    // yep! two-byte address
+    if(len <= 2)
+      fatal("Message too short (2 byte address but packet shorter)");
+    address = address << 8 | *n++;
+  }
+  
+  // extract command
+  //command = *n & 0b11100000;
+  //if(command == 0b01100000)
+  //  command = 0b11000000;
+  
+  // search free buffer and kill other related buffers
+  selected_buffer = NULL;
+  for(char i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
+    if(address == dcc_buffer_pool[i].address
+    || !dcc_buffer_pool[i].address)
+      dcc_buffer_pool[i].reps = 0;
+    if(!selected_buffer && dcc_buffer_pool[i].reps < 0) {
+      selected_buffer = dcc_buffer_pool + i;
+    }
+  }
+  if(!selected_buffer)
+    return NULL;
+  
+  // copy msg to selected buffer
+  memcpy(selected_buffer->msg, msg, len);
+  
+  n = msg;
+  for(char i = 0; i < len; i++)
+    x ^= *n++;
+  msg[len] = x;
+  selected_buffer->len = len + 1;
+//selected_buffer->command = command;
+  selected_buffer->address = address;
+  selected_buffer->reps = 5;
+  
+  return selected_buffer;
+}
+
+void dccSendBuffer(struct dcc_buffer_struct *b)
+{
+  b->reps = 5;
+}
+
+int pipich = 0;
+int popoch = 1;
+unsigned lat;
+ISR(TIMER1_COMPA_vect)
 {
   // Capture the current timer value (TCTNx) (this is how much error we have
   // due to interrupt latency and the work in this function). Then add the
   // next scheduled action.
   // For more info, see http://www.uchobby.com/index.php/2007/11/24/arduino-interrupts/
-  if(timerHandler) {
-    unsigned x = timerHandler();
-    lat = TCNT1;
-    TCNT1 = lat + x;
+  if(popoch = !popoch) {
+    for(int i = 0; i < BOOSTER_N; i++)
+      digitalWrite(booster[i].dirSignalPin, 0);
+    pipich++;
+  } else {
+    for(int i = 0; i < BOOSTER_N; i++)
+      digitalWrite(booster[i].dirSignalPin, 1);
+    OCR1A = pipich & 0x8000 ? 200 : 116;
+    //OCR1A = 200;
+/*    
+    switch(state)  {
+       case PREAMBLE:
+           flag=1; // short pulse
+           preamble_count--;
+           if (preamble_count == 0)  {  // advance to next state
+              state = SEPERATOR;
+              // get next message
+              msgIndex++;
+              if (msgIndex >= MAXMSG)  {  msgIndex = 0; }
+              byteIndex = 0; //start msg with byte 0
+           }
+           break;
+        case SEPERATOR:
+           flag=0; // long pulse
+           // then advance to next state
+           state = SENDBYTE;
+           // goto next byte ...
+           cbit = 0x80;  // send this bit next time first         
+           outbyte = msg[msgIndex].data[byteIndex];
+           break;
+        case SENDBYTE:
+           if (outbyte & cbit)  {
+              flag = 1;  // send short pulse
+           }  else  {
+              flag = 0;  // send long pulse
+           }
+           cbit = cbit >> 1;
+           if (cbit == 0)  {  // last bit sent, is there a next byte?
+              byteIndex++;
+              if (byteIndex >= msg[msgIndex].len)  {
+                 // this was already the XOR byte then advance to preamble
+                 state = PREAMBLE;
+                 preamble_count = 16;
+              }  else  {
+                 // send separtor and advance to next byte
+                 state = SEPERATOR ;
+              }
+           }
+           break;
+     }
+*/
   }
+  lat = TCNT1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -651,11 +681,16 @@ void uiHandler(void)
   }
 }
 
+// HELLO SCREEN
+struct ui_hello_struct {
+  ui_screen base;
+  int       ticks_to_go;
+} ui_hello = { { (ui_screen *(*)(ui_screen *, int)) ui_hello_evh, 0 }, 20 };
+
 // GLOBAL OPTIONS SCREEN
 struct ui_config_global_struct {
   ui_screen base;
   int       current;
-  int       mode; // 0 = off, 1 = pwm, 2 = dcc
 } ui_config_global = { { (ui_screen *(*)(ui_screen *, int)) ui_config_global_evh, 0 }, 0 };
 
 // PWM SCREEN
@@ -664,6 +699,65 @@ struct ui_pwm_struct {
   int       current_pwm;
 } ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
 
+// DCC SCREEN
+//struct ui_pwm_struct {
+//  ui_screen base;
+//  int       current_pwm;
+//} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
+
+PROGMEM prog_char ui_hello_str_0[]  = "  +--- DUAL PWM/DCC CONTROLLER v1.0 ------------------------------------+";
+PROGMEM prog_char ui_hello_str_1[]  = "  |                                                                     |";
+PROGMEM prog_char ui_hello_str_2[]  = "  |  PPPPPP  WW         WW MM       MM    // DDDDDD     CCCCCC  CCCCCC  |";
+PROGMEM prog_char ui_hello_str_3[]  = "  |  PP   PP WW         WW MMMM   MMMM   //  DD   DD   CC      CC       |";
+PROGMEM prog_char ui_hello_str_4[]  = "  |  PP   PP WW    W    WW MM MM MM MM   //  DD    DD CC      CC        |";
+PROGMEM prog_char ui_hello_str_5[]  = "  |  PPPPPP  WW   WWW   WW MM  MMM  MM   //  DD    DD CC      CC        |";
+PROGMEM prog_char ui_hello_str_6[]  = "  |  PP       WW WW WW WW  MM   M   MM  //   DD    DD CC      CC        |";
+PROGMEM prog_char ui_hello_str_7[]  = "  |  PP       WWWW  WWWW   MM       MM  //   DD   DD   CC      CC       |";
+PROGMEM prog_char ui_hello_str_8[]  = "  |  PP        WW    WW    MM       MM //    DDDDDD     CCCCCC  CCCCCC  |";
+PROGMEM prog_char ui_hello_str_9[]  = "  |                                                                     |";
+PROGMEM prog_char ui_hello_str_10[] = "  +------------------------------------ DUAL PWM/DCC CONTROLLER v1.0 ---+";
+PROGMEM prog_char ui_hello_str_11[] = "  (C) 2013 Gerardo García Peña <killabytenow@gmail.com>\r\n";
+PROGMEM prog_char ui_hello_str_12[] = "  This program is free software; you can redistribute it and/or modify it";
+PROGMEM prog_char ui_hello_str_13[] = "  under the terms of the GNU General Public License as published by the Free";
+PROGMEM prog_char ui_hello_str_14[] = "  Software Foundation; either version 2 of the License, or (at your option)";
+PROGMEM prog_char ui_hello_str_15[] = "  any later version.\r\n";
+PROGMEM prog_char ui_hello_str_16[] = "  This program is distributed in the hope that it will be useful, but WITHOUT";
+PROGMEM prog_char ui_hello_str_17[] = "  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or";
+PROGMEM prog_char ui_hello_str_18[] = "  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for";
+PROGMEM prog_char ui_hello_str_19[] = "  more details.\r\n";
+PROGMEM prog_char ui_hello_str_20[] = "  You should have received a copy of the GNU General Public License along";
+PROGMEM prog_char ui_hello_str_21[] = "  with this program; if not, write to the Free Software Foundation, Inc., 51";
+PROGMEM prog_char ui_hello_str_22[] = "  Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA";
+
+PROGMEM const char *ui_hello_str[] = {
+  ui_hello_str_0,  ui_hello_str_1,  ui_hello_str_2,  ui_hello_str_3,  ui_hello_str_4,
+  ui_hello_str_5,  ui_hello_str_6,  ui_hello_str_7,  ui_hello_str_8,  ui_hello_str_9,
+  ui_hello_str_10, ui_hello_str_11, ui_hello_str_12, ui_hello_str_13, ui_hello_str_14,
+  ui_hello_str_15, ui_hello_str_16, ui_hello_str_17, ui_hello_str_18, ui_hello_str_19,
+  ui_hello_str_20, ui_hello_str_21, ui_hello_str_22,
+};
+
+void ui_hello_draw(void)
+{
+  char buffer[100];
+
+  ansi_cls();
+  ansi_goto(1, 5);
+  for(int i = 0; i < sizeof(ui_hello_str) / sizeof(char *); i++) {
+    strcpy_P(buffer, (char *) pgm_read_word(&(ui_hello_str[i])));
+    Serial.println(buffer);
+  }
+}
+
+struct ui_screen *ui_hello_evh(struct ui_hello_struct *ui, int event)
+{
+  if(event == UI_EVENT_OPEN)
+    ui_hello_draw();
+  if(event == UI_EVENT_CLOSE)
+    return NULL;
+    
+  return --ui->ticks_to_go > 0 ? NULL : (struct ui_screen *) &ui_config_global;
+}
 
 void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 {
@@ -677,7 +771,7 @@ void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 
   Serial.print(ui->current == 0 ? ">> " : "   ");
   Serial.print("Signal mode\t<");
-  Serial.print(ui->mode == 1 ? "PWM" : ui->mode == 2 ? "DCC" : "off");
+  Serial.print(booster_mngr[booster_mngr_selected].name);
   Serial.print(">   \r\n");
   Serial.print("\r\n");
   Serial.print(ui->current == 1 ? ">> " : "   ");
@@ -687,6 +781,8 @@ void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 
 struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int event)
 {
+  int n;
+  
   switch(event) {
     case UI_EVENT_PRESSED_UP:
       if(ui->current > 0) {
@@ -707,15 +803,20 @@ struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int e
     case UI_EVENT_SELECT:
       switch(ui->current) {
         case 0:
-          ui->mode += event == UI_EVENT_PRESSED_LEFT ? -1 : 1;
-          if(ui->mode < 0) ui->mode = 2;
-          ui->mode = ui->mode % 3;
+          n = booster_mngr_selected + (event == UI_EVENT_PRESSED_LEFT ? -1 : 1);
+          if(n < 0)
+            n = BOOSTER_MNGR_N - 1;
+          if(n >= BOOSTER_MNGR_N)
+            n = 0;
+          booster_mngr[booster_mngr_selected].fini();
+          booster_mngr_selected = n;
+          booster_mngr[booster_mngr_selected].init();
           break;
         
         case 1:
           if(event != UI_EVENT_SELECT)
             break;
-          switch(ui->mode) {
+          switch(booster_mngr_selected) {
             case 0: return NULL;
             case 1: return (struct ui_screen *) &ui_pwm;
             case 2: return NULL;
@@ -821,21 +922,25 @@ struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
 void setup()
 {
   int i;
+
+  delay(5000);
+  
   Serial.begin(9600);
   Serial.println("Initializing");
   
   boosterSetup();
   joySetup();
-  pwmSetup();
   
-  ui_curr = (struct ui_screen *) &ui_pwm;
+  ui_curr = (struct ui_screen *) &ui_hello;
 }
 
 
 void loop()
 {
-  pwmRefresh();
+  //pwmRefresh();
+  booster_mngr[booster_mngr_selected].refresh();
   uiHandler();
+  ansi_goto(1,1); Serial.print(lat); Serial.print("   ");
   
   delay(100);
 }
