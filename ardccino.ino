@@ -312,58 +312,8 @@ void pwmSwitchDirection(int ps)
 // DCC
 ///////////////////////////////////////////////////////////////////////////////
 
-void dccStart(void)
-{
-  unsigned char sreg;
-  
-  disable_interrupts();
-
-  // CONFIGURE TIMER 1
-  TCCR1A = (TCCR1A & 0b00001100)
-         | 0b00000000     // CTC  mode (!WGM11, !WGM10)
-         | 0b00000000     // OC1A disconnected
-         | 0b00000000;    // OC1B disconnected
-  TCCR1B = (TCCR1B & 0b11100000)
-         | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
-         | 0b00001000;    // Normal mode (!WGM13, WGM12)
-  OCR1B = 0;      // set compare registers to 0
-  OCR1A = 200;
-  TIMSK1 = (TIMSK1 & 0b11011000)
-         | (1 << OCIE1A); // output cmp A match interrupt enable
-           
-  // DISABLE TIMER 2
-  TCCR2A = TCCR2A & 0b00001100;
-  TCCR2B = TCCR2B & 0b11110000;
-  OCR2A = OCR2B = 0;
-  TIMSK2 &= 0b11111000;
-
-  // SET PWM OUTPUTS TO 1
-  for(int b = 0; b < BOOSTER_N; b++)
-    digitalWrite(booster[b].pwmSignalPin, 1);
-
-  //-------------------------------------------
-  // RESET DCC STATUS
-  // TODO
-
-  enable_interrupts();
-}
-
-void dccStop(void)
-{
-  disable_interrupts();
-
-  // disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
-  TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
-  TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
-  OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
-  TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
-
-  enable_interrupts();
-}
-
-void dccRefresh(void)
-{
-}
+#define DCC_CTC_ZERO    200
+#define DCC_CTC_ONE     116
 
 #define DCC_MSG_MAX           5
 #define DCC_BUFFER_POOL_BITS  5
@@ -377,6 +327,7 @@ struct dcc_buffer_struct {
   unsigned char len;
   char reps;
 } dcc_buffer_pool[DCC_BUFFER_POOL_SIZE];
+byte dcc_msg_idle[] = { 0xff, 0x00 };
 
 struct dcc_buffer_struct *dccSendBuffer(byte *msg, unsigned char len)
 {
@@ -437,68 +388,128 @@ void dccSendBuffer(struct dcc_buffer_struct *b)
   b->reps = 5;
 }
 
-int pipich = 0;
-int popoch = 1;
-unsigned lat;
+unsigned dcc_excesive_lat;
+unsigned char dcc_last_msg_id;
+
+#define DCC_STATE_PREAMBLE 0
 ISR(TIMER1_COMPA_vect)
 {
-  // Capture the current timer value (TCTNx) (this is how much error we have
-  // due to interrupt latency and the work in this function). Then add the
-  // next scheduled action.
-  // For more info, see http://www.uchobby.com/index.php/2007/11/24/arduino-interrupts/
-  if(popoch = !popoch) {
-    for(int i = 0; i < BOOSTER_N; i++)
-      digitalWrite(booster[i].dirSignalPin, 0);
-    pipich++;
+  static char dccZero = 0;
+  static char dccCurrentBit;
+  static char dccCurrentByte;
+  static char msg_pending;
+  static byte *msg = NULL;
+  struct dcc_buffer_struct *cmsg;
+
+  /* invert signal */
+  for(int i = 0; i < BOOSTER_N; i++)
+    digitalWrite(booster[i].dirSignalPin, dccZero);
+  if((dccZero = !dccZero))
+    return;
+
+  if(!msg) {
+    // we are still in preamble
+    OCR1A = DCC_CTC_ONE;
+    if(--dccCurrentBit > 0)
+        goto check_latency;
+
+    // select next msg
+    dcc_last_msg_id = (dcc_last_msg_id + 1) & DCC_BUFFER_POOL_MASK;
+    cmsg = dcc_buffer_pool + dcc_last_msg_id;
+    if(cmsg->reps == 0)
+      cmsg->reps = -1;
+    if(cmsg->reps < 0) {
+      msg         = cmsg->msg;
+      msg_pending = cmsg->len;
+    } else {
+      msg         = dcc_msg_idle;
+      msg_pending = sizeof(dcc_msg_idle);
+    }
+    dccCurrentBit = 0;
   } else {
-    for(int i = 0; i < BOOSTER_N; i++)
-      digitalWrite(booster[i].dirSignalPin, 1);
-    OCR1A = pipich & 0x8000 ? 200 : 116;
-    //OCR1A = 200;
-/*    
-    switch(state)  {
-       case PREAMBLE:
-           flag=1; // short pulse
-           preamble_count--;
-           if (preamble_count == 0)  {  // advance to next state
-              state = SEPERATOR;
-              // get next message
-              msgIndex++;
-              if (msgIndex >= MAXMSG)  {  msgIndex = 0; }
-              byteIndex = 0; //start msg with byte 0
-           }
-           break;
-        case SEPERATOR:
-           flag=0; // long pulse
-           // then advance to next state
-           state = SENDBYTE;
-           // goto next byte ...
-           cbit = 0x80;  // send this bit next time first         
-           outbyte = msg[msgIndex].data[byteIndex];
-           break;
-        case SENDBYTE:
-           if (outbyte & cbit)  {
-              flag = 1;  // send short pulse
-           }  else  {
-              flag = 0;  // send long pulse
-           }
-           cbit = cbit >> 1;
-           if (cbit == 0)  {  // last bit sent, is there a next byte?
-              byteIndex++;
-              if (byteIndex >= msg[msgIndex].len)  {
-                 // this was already the XOR byte then advance to preamble
-                 state = PREAMBLE;
-                 preamble_count = 16;
-              }  else  {
-                 // send separtor and advance to next byte
-                 state = SEPERATOR ;
-              }
-           }
-           break;
-     }
-*/
+    if(dccCurrentBit) {
+      // send data bit
+      OCR1A = (*msg & dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
+      dccCurrentBit >>= 1;
+    } else {
+      // separator bit
+      OCR1A = DCC_CTC_ZERO;
+      dccCurrentBit = 0x80;
+      if(--msg_pending > 0) {
+        dccCurrentBit = 0;
+        msg++;
+      } else {
+        msg = NULL;
+        dccCurrentBit = 15;
+      }
+    }
   }
-  lat = TCNT1;
+
+check_latency:
+  // Capture the current timer value (TCTNx) for debugging purposes. It always
+  // should be below 116 (a DCC one). Elsewhere the DCC generator will produce
+  // corrupt signals :P
+  unsigned int lat = TCNT1;
+  if(lat >= DCC_CTC_ONE)
+    dcc_excesive_lat = lat;
+}
+
+void dccStart(void)
+{
+  unsigned char sreg;
+  
+  disable_interrupts();
+
+  // CONFIGURE TIMER 1
+  TCCR1A = (TCCR1A & 0b00001100)
+         | 0b00000000     // CTC  mode (!WGM11, !WGM10)
+         | 0b00000000     // OC1A disconnected
+         | 0b00000000;    // OC1B disconnected
+  TCCR1B = (TCCR1B & 0b11100000)
+         | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
+         | 0b00001000;    // Normal mode (!WGM13, WGM12)
+  OCR1B = 0;      // set compare registers to 0
+  OCR1A = DCC_CTC_ZERO;
+  TIMSK1 = (TIMSK1 & 0b11011000)
+         | (1 << OCIE1A); // output cmp A match interrupt enable
+           
+  // DISABLE TIMER 2
+  TCCR2A = TCCR2A & 0b00001100;
+  TCCR2B = TCCR2B & 0b11110000;
+  OCR2A = OCR2B = 0;
+  TIMSK2 &= 0b11111000;
+
+  // SET PWM OUTPUTS TO 1
+  for(int b = 0; b < BOOSTER_N; b++)
+    digitalWrite(booster[b].pwmSignalPin, 1);
+
+  //-------------------------------------------
+  // RESET DCC STATUS
+  memset(dcc_buffer_pool, 0, sizeof(dcc_buffer_pool));
+
+  enable_interrupts();
+}
+
+void dccStop(void)
+{
+  disable_interrupts();
+
+  // disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+  TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
+  TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
+  OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
+  TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
+
+  enable_interrupts();
+}
+
+void dccRefresh(void)
+{
+  if(dcc_excesive_lat) {
+    Serial.print("dcc_excesive_lat = ");
+    Serial.println(dcc_excesive_lat);
+    fatal("lat too big!");
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -719,7 +730,7 @@ PROGMEM prog_char ui_hello_str_10[] = "  +------------------------------------ D
 PROGMEM prog_char ui_hello_str_11[] = "  (C) 2013 Gerardo García Peña <killabytenow@gmail.com>\r\n";
 PROGMEM prog_char ui_hello_str_12[] = "  This program is free software; you can redistribute it and/or modify it";
 PROGMEM prog_char ui_hello_str_13[] = "  under the terms of the GNU General Public License as published by the Free";
-PROGMEM prog_char ui_hello_str_14[] = "  Software Foundation; either version 2 of the License, or (at your option)";
+PROGMEM prog_char ui_hello_str_14[] = "  Software Foundation; either version 3 of the License, or (at your option)";
 PROGMEM prog_char ui_hello_str_15[] = "  any later version.\r\n";
 PROGMEM prog_char ui_hello_str_16[] = "  This program is distributed in the hope that it will be useful, but WITHOUT";
 PROGMEM prog_char ui_hello_str_17[] = "  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or";
@@ -940,7 +951,7 @@ void loop()
   //pwmRefresh();
   booster_mngr[booster_mngr_selected].refresh();
   uiHandler();
-  ansi_goto(1,1); Serial.print(lat); Serial.print("   ");
+  //ansi_goto(1,1); Serial.print(lat); Serial.print("   ");
   
   delay(100);
 }
