@@ -388,17 +388,17 @@ void dccSendBuffer(struct dcc_buffer_struct *b)
   b->reps = 5;
 }
 
+unsigned int lat;
 unsigned dcc_excesive_lat;
 unsigned char dcc_last_msg_id;
-
+char msg_pending;
+byte *msg = NULL;
 #define DCC_STATE_PREAMBLE 0
 ISR(TIMER1_COMPA_vect)
 {
   static char dccZero = 0;
-  static char dccCurrentBit;
-  static char dccCurrentByte;
-  static char msg_pending;
-  static byte *msg = NULL;
+  static unsigned char dccCurrentBit;
+
   struct dcc_buffer_struct *cmsg;
 
   /* invert signal */
@@ -418,7 +418,7 @@ ISR(TIMER1_COMPA_vect)
     cmsg = dcc_buffer_pool + dcc_last_msg_id;
     if(cmsg->reps == 0)
       cmsg->reps = -1;
-    if(cmsg->reps < 0) {
+    if(cmsg->reps > 0) {
       msg         = cmsg->msg;
       msg_pending = cmsg->len;
     } else {
@@ -431,16 +431,19 @@ ISR(TIMER1_COMPA_vect)
       // send data bit
       OCR1A = (*msg & dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
       dccCurrentBit >>= 1;
+      if(!dccCurrentBit) {
+        msg++;
+        msg_pending--;
+      }
     } else {
       // separator bit
-      OCR1A = DCC_CTC_ZERO;
       dccCurrentBit = 0x80;
-      if(--msg_pending > 0) {
-        dccCurrentBit = 0;
-        msg++;
-      } else {
+      if(msg_pending <= 0) {
         msg = NULL;
         dccCurrentBit = 15;
+        OCR1A = DCC_CTC_ONE; // last bit
+      } else {
+        OCR1A = DCC_CTC_ZERO; // more data will come
       }
     }
   }
@@ -449,7 +452,8 @@ check_latency:
   // Capture the current timer value (TCTNx) for debugging purposes. It always
   // should be below 116 (a DCC one). Elsewhere the DCC generator will produce
   // corrupt signals :P
-  unsigned int lat = TCNT1;
+  //unsigned int 
+  lat = TCNT1;
   if(lat >= DCC_CTC_ONE)
     dcc_excesive_lat = lat;
 }
@@ -457,6 +461,8 @@ check_latency:
 void dccStart(void)
 {
   unsigned char sreg;
+  Serial.print("sizeof(dcc_msg_idle) = "); Serial.println(sizeof(dcc_msg_idle));
+  Serial.print("dcc_msg_idle = "); Serial.println((int) dcc_msg_idle);
   
   disable_interrupts();
 
@@ -505,10 +511,15 @@ void dccStop(void)
 
 void dccRefresh(void)
 {
+  ansi_goto(1,20);
+    Serial.print("msg_pending="); Serial.print((int) msg_pending);
+    Serial.print("  \r\nmsg=");   Serial.print((int) msg);
+    Serial.print("  \r\nlat=");   Serial.print((int) lat); Serial.print("    \r\n\r\n");
+
   if(dcc_excesive_lat) {
     Serial.print("dcc_excesive_lat = ");
     Serial.println(dcc_excesive_lat);
-    fatal("lat too big!");
+    Serial.print("!!!       ");
   }
 }
 
@@ -934,9 +945,10 @@ void setup()
 {
   int i;
 
-  delay(5000);
+  //delay(5000);
   
-  Serial.begin(9600);
+  //Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Initializing");
   
   boosterSetup();
@@ -951,7 +963,6 @@ void loop()
   //pwmRefresh();
   booster_mngr[booster_mngr_selected].refresh();
   uiHandler();
-  //ansi_goto(1,1); Serial.print(lat); Serial.print("   ");
   
   delay(100);
 }
