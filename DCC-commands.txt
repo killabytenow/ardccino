@@ -1,0 +1,24 @@
+Command types  Description
+-------------- ------------------------------
+BC             Baseline commands
+
+Type Description                                           Format
+---- ----------------------------------------------------- ----------
+BC   Speed and Direction Packet For Loco Decos             @@   0b01DCSSSS
+                                                                    D    direction
+                                                                    C    additional speed bit (least significant)
+                                                                    SSSS speed
+BC   Digital Decoder Broadcast Stop Packets For All Decos  @B   0b01DC000S
+                                                                    S = 0 => stop all loco motors
+                                                                      C and D should be zero (ignored)
+                                                                    S = 1 => stop delivering energy to loco motors
+                                                                    D direction
+                                                                    C if 1 bit D may be ignored by the decoder
+
+BC   Digital Decoder Reset Packet For All Decoders         @B   0x00
+BC   Digital Decoder Idle Packet For All Decoders          0xff 0x00
+
+Legend:
+    @@ Address Byte      (0b0AAAAAAA)
+    @B Address Broadcast (0x00)
+
