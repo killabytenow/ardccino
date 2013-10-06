@@ -31,8 +31,10 @@ DC   Decoder Control - Digital Decoder Reset               @@   0b0000000D
                     "00000000" and a Digital Decoder reset (as in the above
                     instruction) shall be performed.
 DC   Decoder Control - Factory Test Instruction            @@   0b0000001X
-            For manufacturers and testing. It must not be sent by any command
-            station during normal operation. This instruction may be a
+            X = 0:  Disable factory test
+            X = 1:  Enable factory test
+            NOTE: For manufacturers and testing. It must not be sent by any
+            command station during normal operation. This instruction may be a
             multi-byte instruction.
 DC   Decoder Control - Set Decoder Flags                   @@   0b0000011D 0bCCCC0SSS
             SSS     Decoder subaddress (see CV#15)
@@ -43,8 +45,15 @@ DC   Decoder Control - Set Decoder Flags                   @@   0b0000011D 0bCCC
               1000: Set Bi-Directional Communications 
               1001: Set 111 Instruction 
               1111: Accept 111 Instructions 
+            NOTE: This instruction is under re-evaluation by the NMRA DCC
+            Working Group. Manufacturers should contact the NMRA DCC
+            Coordinator before implementing this instruction.
 DC   Decoder Control - Set Advanced Addressing (CV#29:5)   @@   0b0000101D
-DC   Decoder Control - Decoder Acknowledgment Request      @@   0b00001111
+            D = 0:  Disable advanced addressing
+            D = 1:  Enable advanced addressing
+DC   Decoder Control - Decoder Acknowledgment Request      @@   0b0000111D
+            D = 0:  Disable decoder acknowledgment
+            D = 1:  Enable decoder acknowledgment
 DC   Consist Control (activation or deactivation)          @@   0b0001001D 0b0AAAAAAA
             A{7}:   7-bit consist address (if A = 0 then consist is deactivated)
             D:      If 0 direction of this unit is normal-direction, elsewhere
