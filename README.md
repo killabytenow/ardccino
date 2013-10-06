@@ -49,6 +49,43 @@ It has two working modes:
 
         - stateful - DCC decoders state is kept.
 
+
+BUILDING
+========
+
+You will need 'arduino-mk' package (it includes the Arduino.mk makefile) and
+the 'arduino-core' package (command line arduino tools).
+
+You need also the UTFT library. You can download it from
+  http://henningkarlsen.com/electronics/library.php?id=52
+
+You must unzip it into the ./libraries/utft directory.
+
+Edit the included 'Makefile' and adjust the following parameters to your
+requirements:
+
+  * ARDUINO_DIR
+      Things which are always in the Arduino distribution e.g. boards.txt,
+      libraries, &c.
+      Default: /usr/share/arduino/
+  * ARDMK_DIR
+      Things which are included in this distribution e.g. ard-parse-boards
+      Default: /usr/
+  * AVR_TOOLS_DIR
+      Things which might be bundled with the Arduino distribution, but might
+      come from the system. Most of the toolchain is like this: on Linux it's
+      supplied by the system.
+      Default: /usr/
+  * BOARD_TAG
+      Your Arduino board. Mine is 'mega2560'. See 'boards.txt' in your Arduino
+      distribution and choose the most appropiate for you.
+  * MCU, F_CPU
+      If you use a BOARD_TAG from 'boards.txt' you don't need to set these.
+  * ARDUINO_PORT  
+      Where you arduino is plug ... I use here an automatic one-liner for
+      discovering it.
+
+
 CLI COMMANDS
 ============
 
