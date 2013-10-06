@@ -72,6 +72,23 @@ int booster_mngr_selected = 0;
 #define BOOSTER_N      ((sizeof(booster)) / (sizeof(struct booster_struct)))
 #define BOOSTER_MNGR_N ((sizeof(booster_mngr)) / (sizeof(struct booster_mngr_struct)))
 
+void boosterMngrSelect(int mngr)
+{
+  booster_mngr[booster_mngr_selected].fini();
+  booster_mngr_selected = mngr;
+  booster_mngr[booster_mngr_selected].init();
+}
+
+void boosterMngrSelectByName(char *mngr)
+{
+  for(int i = 0; i < BOOSTER_MNGR_N; i++)
+    if(strcasecmp(booster_mngr[i], mngr)) {
+      boosterMngrSelect(i);
+      return;
+    }
+  fatal("Invalid booster selected.");
+}
+
 void boosterSetup(void)
 {
   Serial.print("Declared ");
@@ -95,12 +112,8 @@ void boosterEmergencyStop()
 {
   Serial.println("Booster emergency stop!");
   
-  // finish current booster manager
-  booster_mngr[booster_mngr_selected].fini();
-  
-  // select OFF
-  booster_mngr_selected = 0;
-  booster_mngr[booster_mngr_selected].init();
+  // finish current booster manager and select off
+  boosterMngrSelect(0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -863,9 +876,7 @@ struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int e
             n = BOOSTER_MNGR_N - 1;
           if(n >= BOOSTER_MNGR_N)
             n = 0;
-          booster_mngr[booster_mngr_selected].fini();
-          booster_mngr_selected = n;
-          booster_mngr[booster_mngr_selected].init();
+          boosterMngrSelect(n);
           break;
         
         case 1:
@@ -974,6 +985,177 @@ struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
   return NULL;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// CLI
+///////////////////////////////////////////////////////////////////////////////
+
+struct {
+  char *token;
+  int   value;
+} cli_tokens[] = {
+};
+
+int cli_token(char *token)
+{
+}
+
+int cli_parse(char *buffer)
+{
+  char *p, *token[10], ntokens;
+  int b, a;
+
+  // tokenize
+  ntokens = 0;
+  p = buffer;
+  while(*p && ntokens < 10) {
+    while(*p && (*p == ' ' || *p == '\t')) p++;
+    if(!*p)
+      break;
+
+    // delimit token
+    token[ntokens++] = p;
+    while(*p && *p != ' ' && *p != '\t') p++;
+    if(!*p)
+      break;
+    *p++ = '\0';
+  }
+
+  // [ALL] ---
+  if(!ntokens)
+    return 0;
+
+  if(ntokens == 1) {
+      if(!strcasecmp(token[0], "about")) { // [ALL] about
+        ui_hello_draw();
+      } else 
+      if(!strcasecmp(token[0], "menu" )) { // [ALL] menu
+        ui_curr = (struct ui_screen *) &ui_hello;
+        current_ui_handler = uiHandler;
+      } else
+      if(!strcasecmp(token[0], "off"  )
+      || !strcasecmp(token[0], "pwm"  )
+      || !strcasecmp(token[0], "dcc"  )) { // [ALL] off / pwm / dcc
+        boosterMngrSelectByName(token[0]);
+        Serial.print("Selected mode ["); Serial.print(token[0]); Serial.println("]");
+      } else
+        goto unknown_command;
+  } else
+  if(
+
+    case 2:
+      // [ALL] booster list
+      if(!strcasecmp(token[0], "booster")
+      && !strcasecmp(token[1], "list"))
+        return cli_booster_list();
+      break;
+
+    case 3:
+      // [ALL] booster <n> status
+      if(!strcasecmp(token[0], "booster")
+      && !strcasecmp(token[2], "status")) {
+        sscanf(token[1], "%d", &b);
+        return cli_booster_status(b);
+      }
+
+      // [DCC] dcc mode (stateless|stateful)
+      if(!strcasecmp(token[0], "dcc")
+      && !strcasecmp(token[1], "mode")) {
+        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "dcc"))
+          goto bad_mode;
+        a = !strcmpcase(token[2], "stateful");
+        sscanf(token[1], "%d", &b);
+        return cli_booster_status(b);
+      }
+      break;
+
+    case 4:
+      // [ALL] booster <n> ...
+      if(!strcasecmp(token[0], "booster")) {
+        sscanf(token[1], "%d", &b);
+
+        // [ALL] booster <n> power (off|on)
+        if(!strcasecmp(token[2], "power")) {
+          if(strcasecmp(token[3], "on") && strcasecmp(token[3], "off"))
+            goto bad_syntax;
+          return cli_booster_status(b);
+        }
+
+        // [PWM] booster <n> ...
+        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
+          goto bad_mode;
+
+        // [PWM] booster <n> speed [<v>]
+        if(!strcasecmp(token[2], "speed")) {
+          sscanf(token[3], "%d", &a);
+          return cli_booster_status(b);
+        }
+
+        // [PWM] booster <n> mode (direct|inertial)
+        if(!strcasecmp(token[2], "mode")) {
+          a = !strcasecmp(token[3], "inertial");
+          return cli_booster_status(b);
+        }
+
+        // [PWM] booster <n> acceleration [<a>]
+        if(!strcasecmp(token[2], "acceleration")) {
+          sscanf(token[3], "%d", &a);
+          return cli_booster_status(b);
+        }
+
+      }
+      break;
+
+    case 5:
+      // [ALL] booster <n> ...
+      if(!strcasecmp(token[0], "booster")) {
+        sscanf(token[1], "%d", &b);
+
+        // [PWM] booster <n> ...
+        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
+          goto bad_mode;
+
+        // [PWM] booster <n> minimum speed [<v>]
+        if(!strcasecmp(token[2], "minimum")
+        && !strcasecmp(token[3], "speed")) {
+          sscanf(token[4], "%d", &a);
+          return cli_booster_status(b);
+        }
+
+        // [PWM] booster <n> maximum acceleration [<a>]
+        if(!strcasecmp(token[2], "maximum")
+        && !strcasecmp(token[3], "acceleration")) {
+          sscanf(token[4], "%d", &a);
+          return cli_booster_status(b);
+        }
+      }
+      break;
+
+    default:
+      // [DCC] dcc send [service [acked]] command <bytes...>
+      // [DCC] dcc read <v> [mode (paged|direct)]
+  }
+
+  return 0;
+
+unknown_command:
+  Serial.println("error: Unknown command");
+  return 1;
+
+bad_syntax:
+  Serial.println("error: Bad syntax.");
+  return 1;
+
+bad_mode:
+  Serial.println("error: This command cannot be executed in current mode.");
+  return 1;
+}
+
+void cliHandler(void)
+{
+}
+
+void (*current_ui_handler)(void);
+
 void setup()
 {
   int i;
@@ -987,15 +1169,17 @@ void setup()
   boosterSetup();
   joySetup();
   
-  ui_curr = (struct ui_screen *) &ui_hello;
+  // init menu ui
+  //ui_curr = (struct ui_screen *) &ui_hello;
+  //current_ui_handler = uiHandler;
+  current_ui_handler = cliHandler;
 }
 
 
 void loop()
 {
-  //pwmRefresh();
   booster_mngr[booster_mngr_selected].refresh();
-  uiHandler();
+  current_ui_handler();
   
   delay(100);
 }
