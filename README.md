@@ -58,9 +58,6 @@ GENERIC COMMANDS
 about
   Shows version, copyright and contact info
 
-menu
-  Launches the serial menu driven interface
-
 booster list
   Prints booster info
 
@@ -107,7 +104,7 @@ DCC COMMANDS
 dcc
   Go to DCC mode for digital locomotives.
 
-dcc mode (stateless|stateful)
+dcc mode (passthrought|stateful)
   Set DCC control mode:
     - stateless - passthrough DCC commands. The DCC decoders state is never
       kept.
