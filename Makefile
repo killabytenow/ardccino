@@ -10,5 +10,8 @@ ARDUINO_PORT           = /dev/`dmesg |grep 'FTDI USB Serial Device converter now
 AVRDUDE_ARD_BAUDRATE   = 115200
 AVRDUDE_ARD_PROGRAMMER = arduino
 USER_LIB_PATH          = ./libraries/
- 
+
+.tokens.h .clierrs.h : parse_lists.sh tokens.list clierrs.list
+	./parse_lists.sh
+
 include $(ARDUINO_DIR)/Arduino.mk

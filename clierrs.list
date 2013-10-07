@@ -1,0 +1,7 @@
+CLI_ERR_OK               = Ok
+CLI_ERR_UNKNOWN_COMMAND  = Unknown command
+CLI_ERR_NEED_MORE_PARAMS = Need more parameters
+CLI_ERR_TOO_MANY_PARAMS  = Too many parameters
+CLI_ERR_BAD_SYNTAX       = Bad syntax
+CLI_ERR_BAD_MODE         = This command cannot be executed in current mode.
+CLI_ERR_BAD_BOOSTER      = Unknown booster selected

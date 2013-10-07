@@ -9,8 +9,6 @@ struct pwmOutput_struct {
   unsigned char pwmMode;
 } pwmOutput[BOOSTER_N];
 
-#define PWM_OUTPUT_MODE_DIRECT    0
-#define PWM_OUTPUT_MODE_INERTIAL  1
 #define PWM_OUTPUT_N              BOOSTER_N
 #define PWM_OUTPUT_MIN            60
 #define PWM_OUTPUT_MAX            (255 - PWM_OUTPUT_MIN)
@@ -168,6 +166,16 @@ void pwmAccelerate(int ps, int v)
               : (pwmOutput[ps].pwmValTarget + v > -PWM_OUTPUT_MAX
                   ? pwmOutput[ps].pwmValTarget + v
                   : -PWM_OUTPUT_MAX);
+}
+
+void pwmSpeed(int ps, int s)
+{
+	if(ps < 0 || ps > BOOSTER_N)
+		fatal("pwmSpeed: pwm booster out of bounds.");
+	if(s < -255 || s > 255)
+		fatal("pwmSpeed: speed out of bounds.");
+
+	pwmOutput[ps].pwmValTarget = s;
 }
 
 void pwmStop(int sp)

@@ -6,6 +6,11 @@
 #include "booster_mngr.h"
 #include "cli.h"
 
+// following files are generated with 'parse_lists.sh' script using the
+// contents of 'tokens.list' and 'clierrs.list' files.
+#include ".tokens.h"
+#include ".clierrs.h"
+
 void _ansi_cls(void)
 {
   Serial.print("\x1B[1J");
@@ -83,56 +88,36 @@ void cliBoosterList(void)
 		}
 #define CLI_TOKEN_EXPECTED(x)                                    \
 		{                                                \
-			uint __x = (x);                          \
+			int8_t __x = (x);                        \
 			if(__x < ntokens)                        \
 				return CLI_ERR_NEED_MORE_PARAMS; \
 			if(__x > ntokens)                        \
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
-struct {
-  char *token;
-  int   value;
-} cli_tokens[] = {
-	"about",        CLI_TOKEN_ABOUT,
-	"acceleration", CLI_TOKEN_ACCELERATION,
-	"acked",        CLI_TOKEN_ACKED,
-	"booster",      CLI_TOKEN_BOOSTER,
-	"dcc",          CLI_TOKEN_DCC,
-	"direct",       CLI_TOKEN_DIRECT,
-	"inertial",     CLI_TOKEN_INERTIAL,
-	"list",         CLI_TOKEN_LIST,
-	"maximum",      CLI_TOKEN_MAXIMUM,
-	"minimum",      CLI_TOKEN_MINIMUM,
-	"mode",         CLI_TOKEN_MODE,
-	"off",          CLI_TOKEN_OFF,
-	"on",           CLI_TOKEN_ON,
-	"paged",        CLI_TOKEN_PAGED,
-	"passthrought", CLI_TOKEN_PASSTHROUGHT,
-	"pwm",          CLI_TOKEN_PWM,
-	"read",         CLI_TOKEN_READ,
-	"send",         CLI_TOKEN_SEND,
-	"speed",        CLI_TOKEN_SPEED,
-	"stateful",     CLI_TOKEN_STATEFUL,
-	"status",       CLI_TOKEN_STATUS,
-};
 
-int cli_token(char *token, int *i, float *f)
+int cli_token(char *token, int *i)
 {
 }
 
+int cli_token(char *token)
+{
+	return cli_token(token, NULL);
+}
+
+/*
 int cli_execute_dcc(char **token, char ntokens)
 {
 	switch(cli_token(token[1])) {
 	// COMMAND: dcc
   	case CLI_TOKEN_ABOUT:
-
+*/
 int cli_execute_booster(char **token, char ntokens)
 {
-	int t, booster;
+	int t, booster, a;
 
 	// here we need at least 2 tokens
 	CLI_TOKEN_AT_LEAST(2);
-	t = cli_token(token[1], &booster, NULL);
+	t = cli_token(token[1], &booster);
 
 	// COMMAND: booster list
 	if(t == CLI_TOKEN_LIST) {
@@ -142,7 +127,7 @@ int cli_execute_booster(char **token, char ntokens)
 	}
 
 	// COMMAND: booster <n> ***
-	if(t != CLI_TOKEN_INT)
+	if(t != CLI_TOKEN_INTEGER)
 		return CLI_ERR_UNKNOWN_COMMAND;
 	if(booster < 0
 	|| booster >= BOOSTER_N)
@@ -151,14 +136,27 @@ int cli_execute_booster(char **token, char ntokens)
 	// here we need at least 3 tokens
 	CLI_TOKEN_AT_LEAST(3);
 
-	switch(cli_token(token[2], NULL, NULL)) {
+	switch(cli_token(token[2], NULL)) {
 	// COMMAND: booster <n> power (on|off)
+	// COMMAND: booster <n> power <v>
 	case CLI_TOKEN_POWER:
 		CLI_TOKEN_EXPECTED(4);
-		switch(cli_token(token[3])) {
-		case CLI_TOKEN_ON:  boosterOn(booster);  break;
-		case CLI_TOKEN_OFF: boosterOff(booster); break;
-		default: return CLI_ERR_BAD_SYNTAX;
+		switch(cli_token(token[3], &a)) {
+		case CLI_TOKEN_ON:
+			boosterOn(booster);
+			break;
+		case CLI_TOKEN_OFF:
+			boosterOff(booster);
+			break;
+		case CLI_TOKEN_INTEGER:
+			if(a < -255 || a > 255)
+				return CLI_ERR_BAD_SYNTAX;
+			if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
+				return CLI_ERR_BAD_MODE;
+			pwmSpeed(booster, a);
+			break;
+		default:
+			return CLI_ERR_BAD_SYNTAX;
 		}
 		break;
 	// COMMAND: booster <n> status
@@ -166,6 +164,25 @@ int cli_execute_booster(char **token, char ntokens)
 		CLI_TOKEN_EXPECTED(3);
 		cliBoosterStatus(booster);
 		break;
+	// COMMAND: booster <n> mode (direct|inertial)
+	case CLI_TOKEN_POWER:
+		CLI_TOKEN_EXPECTED(4);
+		switch(cli_token(token[3], NULL)) {
+		case CLI_TOKEN_DIRECT:
+			pwmMode(booster, PWM_OUTPUT_MODE_DIRECT);
+			break;
+		case CLI_TOKEN_INERTIAL:
+			pwmMode(booster, PWM_OUTPUT_MODE_INERTIAL);
+			break;
+		default:
+			return CLI_ERR_BAD_SYNTAX;
+		}
+		break;
+	// COMMAND: booster <n> minimum power [<v>]
+	case CLI_TOKEN_MINIMUM:
+		CLI_TOKEN_EXPECTED(5);
+		if(cli_token(token[4], NULL)
+
 	
 	...
 	}
@@ -268,7 +285,7 @@ int cli_execute_booster(char **token, char ntokens)
 }
 int cli_execute(char **token, char ntokens)
 {
-	switch(cli_token(token[0])) {
+	switch(cli_token(token[0], NULL)) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
 		if(ntokens > 1) goto too_many_params;

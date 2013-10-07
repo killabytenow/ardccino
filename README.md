@@ -85,6 +85,10 @@ requirements:
       Where you arduino is plug ... I use here an automatic one-liner for
       discovering it.
 
+Now run:
+    $ ./parse_tokens.sh
+    $ make
+
 
 CLI COMMANDS
 ============
@@ -116,7 +120,7 @@ PWM COMMANDS
 pwm
   Go to PWM mode for analog locomotives.
 
-booster <n> power [+-][<v>]
+booster <n> power <v>
   Set booster #n power level. Value 'v' is a signed integer between "minimum
   power" (see below) and 255. Sign determines direction.
 
