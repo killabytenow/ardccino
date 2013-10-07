@@ -10,11 +10,12 @@
 
 struct booster_struct {
   char          *name;
-  unsigned char  pwmSignalPin;
-  unsigned char  dirSignalPin;
-  unsigned char  tmpAlarmPin;  // temperature alarm
-  unsigned char  ocpAlarmPin;  // over current protection alarm
-  unsigned char  rstSignalPin; // reset pin
+  unsigned char pwmSignalPin;
+  unsigned char dirSignalPin;
+  unsigned char tmpAlarmPin;  // temperature alarm
+  unsigned char ocpAlarmPin;  // over current protection alarm
+  unsigned char rstSignalPin; // reset pin
+  char		on;
 };
 
 extern struct booster_struct booster[];
@@ -22,7 +23,7 @@ extern struct booster_struct booster[];
 #define boosterPwmSet(b,v)                 \
 	digitalWrite(                      \
 		booster[(b)].pwmSignalPin, \
-		(v))
+		(v) & on)
 
 #define boosterDirSet(b,v)                 \
 	digitalWrite(                      \
@@ -31,5 +32,7 @@ extern struct booster_struct booster[];
 
 void boosterSetup(void);
 void boosterEmergencyStop(void);
+void boosterOn(int b);
+void boosterOff(int b);
 
 #endif

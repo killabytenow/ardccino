@@ -68,10 +68,27 @@ void cliAbout(void)
   }
 }
 
+void cliBoosterList(void)
+{
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // COMMAND LINE PARSER
 ///////////////////////////////////////////////////////////////////////////////
 
+#define CLI_TOKEN_AT_LEAST(x)                                    \
+		{                                                \
+			if((x) < ntokens)                        \
+				return CLI_ERR_NEED_MORE_PARAMS; \
+		}
+#define CLI_TOKEN_EXPECTED(x)                                    \
+		{                                                \
+			uint __x = (x);                          \
+			if(__x < ntokens)                        \
+				return CLI_ERR_NEED_MORE_PARAMS; \
+			if(__x > ntokens)                        \
+				return CLI_ERR_TOO_MANY_PARAMS;  \
+		}
 struct {
   char *token;
   int   value;
@@ -99,65 +116,60 @@ struct {
 	"status",       CLI_TOKEN_STATUS,
 };
 
-int cli_token(char *token)
+int cli_token(char *token, int *i, float *f)
 {
 }
 
-int cli_parse(char *buffer)
+int cli_execute_dcc(char **token, char ntokens)
 {
-  char *p, *token[10], ntokens;
-  int b, a;
-
-  // tokenize
-  ntokens = 0;
-  p = buffer;
-  while(*p && ntokens < 10) {
-    while(*p && (*p == ' ' || *p == '\t')) p++;
-    if(!*p)
-      break;
-
-    // delimit token
-    token[ntokens++] = p;
-    while(*p && *p != ' ' && *p != '\t') p++;
-    if(!*p)
-      break;
-    *p++ = '\0';
-  }
-
-  // [ALL] ---
-  if(!ntokens)
-    return 0;
-
-  switch(cli_token(token[0])) {
+	switch(cli_token(token[1])) {
+	// COMMAND: dcc
   	case CLI_TOKEN_ABOUT:
-		if(ntokens > 1) goto too_many_params;
-		cli_about();
-		break;
 
-	case CLI_TOKEN_OFF:
-	case CLI_TOKEN_PWM:
-		if(ntokens > 1) goto too_many_params;
-		boosterMngrSelectByName(token[0]);
-		break;
+int cli_execute_booster(char **token, char ntokens)
+{
+	int t, booster;
 
-	case CLI_TOKEN_DCC:
-		if(ntokens == 1) {
-			boosterMngrSelectByName(token[0]);
-			break;
+	// here we need at least 2 tokens
+	CLI_TOKEN_AT_LEAST(2);
+	t = cli_token(token[1], &booster, NULL);
+
+	// COMMAND: booster list
+	if(t == CLI_TOKEN_LIST) {
+		CLI_TOKEN_EXPECTED(2);
+		cliBoosterList();
+		return CLI_ERR_OK;
+	}
+
+	// COMMAND: booster <n> ***
+	if(t != CLI_TOKEN_INT)
+		return CLI_ERR_UNKNOWN_COMMAND;
+	if(booster < 0
+	|| booster >= BOOSTER_N)
+		return CLI_ERR_BAD_BOOSTER;
+
+	// here we need at least 3 tokens
+	CLI_TOKEN_AT_LEAST(3);
+
+	switch(cli_token(token[2], NULL, NULL)) {
+	// COMMAND: booster <n> power (on|off)
+	case CLI_TOKEN_POWER:
+		CLI_TOKEN_EXPECTED(4);
+		switch(cli_token(token[3])) {
+		case CLI_TOKEN_ON:  boosterOn(booster);  break;
+		case CLI_TOKEN_OFF: boosterOff(booster); break;
+		default: return CLI_ERR_BAD_SYNTAX;
 		}
-		switch(cli_token(
+		break;
+	// COMMAND: booster <n> status
+	case CLI_TOKEN_STATUS:
+		CLI_TOKEN_EXPECTED(3);
+		cliBoosterStatus(booster);
+		break;
 	
-  if(ntokens == 1) {
-      if(!strcasecmp(token[0], "about")) { // [ALL] about
-        cliAbout();
-      } else 
-      if(!strcasecmp(token[0], "off"  )
-      || !strcasecmp(token[0], "pwm"  )
-      || !strcasecmp(token[0], "dcc"  )) { // [ALL] off / pwm / dcc
-        Serial.print("Selected mode ["); Serial.print(token[0]); Serial.println("]");
-      } else
-        goto unknown_command;
-  } else
+	...
+	}
+
   if(
 
     case 2:
@@ -253,23 +265,93 @@ int cli_parse(char *buffer)
       // [DCC] dcc read <v> [mode (paged|direct)]
   }
 
-  return 0;
+}
+int cli_execute(char **token, char ntokens)
+{
+	switch(cli_token(token[0])) {
+	// COMMAND: about
+  	case CLI_TOKEN_ABOUT:
+		if(ntokens > 1) goto too_many_params;
+		cli_about();
+		break;
 
-unknown_command:
-	Serial.println("error: Unknown command");
-	return 1;
+	// COMMAND: off
+	// COMMAND: pwm
+	case CLI_TOKEN_OFF:
+	case CLI_TOKEN_PWM:
+		if(ntokens > 1) goto too_many_params;
+		boosterMngrSelectByName(token[0]);
+		break;
 
-too_many_params:
-	Serial.println("error: too many parameters");
-	return 1;
+	// COMMAND:  dcc
+	// COMMANDS: dcc ***
+	case CLI_TOKEN_DCC:
+		if(ntokens == 1)
+			boosterMngrSelectByName(token[0]);
+		else
+			return cli_execute_dcc(token, ntokens);
+		break;
+	
+	// COMMANDS: booster ***
+	case CLI_TOKEN_BOOSTER:
+		return cli_execute_booster(token, ntokens);
 
-bad_syntax:
-	Serial.println("error: Bad syntax.");
-	return 1;
+	// other
+	default:
+		return CLI_ERR_UNKNOWN_COMMAND;
+	}
 
-bad_mode:
-	Serial.println("error: This command cannot be executed in current mode.");
-	return 1;
+	return CLI_ERR_OK;
+}
+
+void cli_parse(char *buffer)
+{
+	char *p, *token[10], ntokens;
+	int b, a;
+
+	// tokenize
+	ntokens = 0;
+	p = buffer;
+	while(*p && ntokens < 10) {
+		while(*p && (*p == ' ' || *p == '\t')) p++;
+		if(!*p)
+		break;
+
+		// delimit token
+		token[ntokens++] = p;
+		while(*p && *p != ' ' && *p != '\t') p++;
+		if(!*p)
+		break;
+		*p++ = '\0';
+	}
+
+	// [ALL] ---
+	if(!ntokens)
+		return;
+
+	switch(cli_execute(token, ntokens)) {
+	case CLI_ERR_UNKNOWN_COMMAND:
+		Serial.println("error: Unknown command");
+		break;
+	case CLI_ERR_NEED_MORE_PARAMS:
+		Serial.println("error: need more parameters");
+		break;
+	case CLI_ERR_TOO_MANY_PARAMS:
+		Serial.println("error: too many parameters");
+		break;
+	case CLI_ERR_BAD_SYNTAX:
+		Serial.println("error: Bad syntax.");
+		break;
+	case CLI_ERR_BAD_MODE:
+		Serial.println("error: This command cannot be executed in current mode.");
+		break;
+	case CLI_ERR_BAD_BOOSTER:
+	case CLI_ERR_OK:
+		Serial.println("Ok");
+		break;
+	default:
+		Serial.println("error: Unknown error");
+	}
 }
 
 void cliHandler(void)
