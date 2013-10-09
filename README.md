@@ -96,73 +96,87 @@ CLI COMMANDS
 GENERIC COMMANDS
 ----------------
 
-about
+`about`
   Shows version, copyright and contact info
 
-booster list
+`booster list`
   Prints booster info
 
-booster <n> power (off|on)
+`booster <n> power (off|on)`
   Activates/deactivates booster #n
 
-booster <n> status
+`booster <n> reset`
+  Resets booster #n state
+
+`booster <n> status`
   Print info about booster #n
 
 OFF COMMANDS
 ------------
 
-off
+`off`
   Go to off mode. No powered delivered to tracks.
 
 PWM COMMANDS
 ------------
 
-pwm
+`pwm`
   Go to PWM mode for analog locomotives.
 
-booster <n> power <v>
+`booster <n> power <v>`
   Set booster #n power level. Value 'v' is a signed integer between "minimum
   power" (see below) and 255. Sign determines direction.
 
-booster <n> mode (direct|inertial)
+`booster <n> mode (direct|inertial)`
   Enable or deactivate the 'inertial' feature when changing the booster power
   level. In direct mode any change to the power level is applied inmediately.
   In intertial mode the power level is changed applying the 'acceleration' and
   'maximum acceleration' parameters.
 
-booster <n> minimum power [<v>]
+`booster <n> minimum power [<v>]`
   Sets the minimum power delivered by the PWM signal to tracks.
 
-booster <n> acceleration [<a>]
+`booster <n> acceleration [<a>]`
   Sets the acceleration parameter when running in 'inertial' mode.
 
-booster <n> maximum acceleration [<a>]
+`booster <n> maximum acceleration [<a>]`
   Sets the maximum acceleration parameter when running in 'inertial' mode.
 
 DCC COMMANDS
 ------------
 
-dcc
+*NOTES*:
+  (1) If DCC device address is preceded by the '!' operator, the resulting command
+  or action is performed on the service track.
+
+  (2) XXX
+
+
+`dcc`
   Go to DCC mode for digital locomotives.
 
-dcc mode (passthrought|stateful)
+`dcc track (operations|service)`
+  Following commands will be sent to the normal operations track or the service
+  track.
+  
+`dcc mode (pass_through|stateful)`
   Set DCC control mode:
-    - stateless - passthrough DCC commands. The DCC decoders state is never
+    - stateless - pass through DCC commands. The DCC decoders state is never
       kept.
     - stateful - DCC decoders state is kept.
 
-dcc <n> speed [4bit|5bit|7bit] [+-]<v> [acked]
+`dcc [!] <n> speed [4bit|5bit|7bit] [+-]<v> [acked]`
   Send speed update to decode <n>. In stateless mode CV#29:5 is assumed to be
   on, and the default selected instruction is 5bit. In stateful mode, selected
   instruction (4bit, 5bit or 7bit) depends on the state configured for deco
   <n>.
 
-dcc <n> f <f> (on|off) [acked]
+`dcc [!] <n> f <f> (on|off) [acked]`
   Set flag <f> (on|off)
 
-dcc <n> analog <f> <v> [acked]
+`dcc [!] <n> analog <f> <v> [acked]`
 
-dcc <n> address (advanced|normal) [acked]
-dcc <n> ack (service|railcom|off)
-dcc <n> send [service] command <bytes...> [acked]
-dcc <n> read <v> [mode (paged|direct)]
+`dcc [!] <n> address (advanced|normal) [acked]`
+`dcc [!] <n> ack (service|railcom|off)`
+`dcc [!] <n> send [service] command <bytes...> [acked]`
+`dcc [!] <n> read <v> [mode (paged|direct)]`
