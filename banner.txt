@@ -1,0 +1,20 @@
++-- DUAL PWM/DCC CONTROLLER v1.0 -----+
+|                                     |
+| PPP  W   W M   M   / DDD   CCC  CCC |
+| P  P W   W MM MM   / D  D C    C    |
+| P  P W   W M M M  /  D  D C    C    |
+| PPP  W W W M M M  /  D  D C    C    |
+| P    W W W M   M  /  D  D C    C    |
+| P    WW WW M   M  /  D  D C    C    |
+| P    W   W M   M /   DDD   CCC  CCC |
+|                                     |
++-------------------------------------+
+(C) 2013 Gerardo García Peña
+               <killabytenow@gmail.com>
+This program is  free software; you can
+redistribute  it and/or modify it under
+the  terms  of the GNU  General  Public
+License   as  published   by  the  Free
+Software  Foundation; either  version 3
+of the License, or (at your option) any
+later version.
