@@ -1,7 +1,33 @@
-CLI_ERR_OK               = Ok
-CLI_ERR_UNKNOWN_COMMAND  = Unknown command
-CLI_ERR_NEED_MORE_PARAMS = Need more parameters
-CLI_ERR_TOO_MANY_PARAMS  = Too many parameters
-CLI_ERR_BAD_SYNTAX       = Bad syntax
-CLI_ERR_BAD_MODE         = This command cannot be executed in current mode.
-CLI_ERR_BAD_BOOSTER      = Unknown booster selected
+###############################################################################
+# clierrs.list
+#
+# Error codes/messages used by the serial CLI interface.
+#
+# ---------------------------------------------------------------------------
+# ardccino - Arduino dual PWM/DCC controller
+#   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+#
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the Free
+#   Software Foundation; either version 3 of the License, or (at your option)
+#   any later version.
+#
+#   This program is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+#   for more details.
+#
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#
+###############################################################################
+
+CLI_ERR_OK                   = Ok
+CLI_ERR_UNKNOWN_COMMAND      = Unknown command
+CLI_ERR_NEED_MORE_PARAMS     = Need more parameters
+CLI_ERR_TOO_MANY_PARAMS      = Too many parameters
+CLI_ERR_BAD_SYNTAX           = Bad syntax
+CLI_ERR_MODE_ALREADY_ENABLED = Mode already enabled.
+CLI_ERR_BAD_MODE             = This command cannot be executed in current mode.
+CLI_ERR_BAD_BOOSTER          = Unknown booster selected
