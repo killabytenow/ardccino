@@ -1,23 +1,44 @@
-#include "booster.h"
-#include "booster_mngr.h"
+/*****************************************************************************
+ * off.cpp
+ *
+ * The null energy-saving booster manager.
+ *
+ * ---------------------------------------------------------------------------
+ * ardccino - Arduino dual PWM/DCC controller
+ *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify it
+ *   under the terms of the GNU General Public License as published by the Free
+ *   Software Foundation; either version 3 of the License, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful, but
+ *   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *   for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ *****************************************************************************/
+
+#include <Arduino.h>
 #include "off.h"
 
-struct booster_mngr_struct offBoosterMngr =
-	{ "off", offStart, offStop, offRefresh };
-
-void offStart(void)
+void OffMngr::init(void)
 {
-	for(int b = 0; b < BOOSTER_N; b++) {
-		boosterPwmSet(b, LOW);
-		boosterDirSet(b, LOW);
+	for(int b = 0; b < boosters_n; b++) {
+		digitalWrite(boosters[b]->pwmSignalPin, LOW);
+		digitalWrite(boosters[b]->dirSignalPin, LOW);
 	  }
 }
 
-void offStop(void)
+void OffMngr::fini(void)
 {
 }
 
-void offRefresh(void)
+void OffMngr::refresh(void)
 {
 }
 
