@@ -23,8 +23,9 @@
  *
  *****************************************************************************/
 
+#include "config.h"
 #include "interrupts.h"
-#include "USBAPI.h"
+//#include "USBAPI.h"
 #include "error.h"
 #include "dcc.h"
 
