@@ -23,8 +23,7 @@
  *
  *****************************************************************************/
 
-#include <Arduino.h>
-#include "off.h"
+#include "config.h"
 #include "error.h"
 
 void fatal(char *msg)
