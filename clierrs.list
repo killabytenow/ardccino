@@ -31,3 +31,4 @@ CLI_ERR_BAD_SYNTAX           = Bad syntax
 CLI_ERR_MODE_ALREADY_ENABLED = Mode already enabled.
 CLI_ERR_BAD_MODE             = This command cannot be executed in current mode.
 CLI_ERR_BAD_BOOSTER          = Unknown booster selected
+CLI_ERR_NOT_IMPLEMENTED      = Feature not implemented yet
