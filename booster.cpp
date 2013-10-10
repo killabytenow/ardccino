@@ -1,52 +1,103 @@
-///////////////////////////////////////////////////////////////////////////////
-// BOOSTER CONFIG
-///////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * booster.cpp
+ *
+ * Booster definition and configuration object.
+ *
+ * ---------------------------------------------------------------------------
+ * ardccino - Arduino dual PWM/DCC controller
+ *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify it
+ *   under the terms of the GNU General Public License as published by the Free
+ *   Software Foundation; either version 3 of the License, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful, but
+ *   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *   for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ *****************************************************************************/
 
 #include "Arduino.h"
 #include "booster.h"
-#include "booster_mngr.h"
 
-//   - Pins 5 and 6 are paired on timer0
-//   - Pins 9 and 10 are paired on timer1
-//   - Pins 3 and 11 are paired on timer2
-struct booster_struct booster[] = {
-    { "booster#1",  3,  2,   4,  5, 14 },
-    { "booster#2",  9,  6,   7,  8, 14 },
-    { "booster#3", 10, 11,  12, 13, 14 },
-//  { "booster#4", xx, xx,  xx, xx, xx },
-};
-
-int booster_mngr_selected = 0;
-
-#define BOOSTER_N      ((sizeof(booster)) / (sizeof(struct booster_struct)))
-#define BOOSTER_MNGR_N ((sizeof(booster_mngr)) / (sizeof(struct booster_mngr_struct)))
-
-void boosterSetup(void)
+Booster::Booster(char   *name,
+		 uint8_t pwmSignalPin, 
+		 uint8_t dirSignalPin,
+		 uint8_t tmpAlarmPin,
+		 uint8_t ocpAlarmPin,
+		 uint8_t rstSignalPin)
+	: name(name),
+	  pwmSignalPin(pwmSignalPin), dirSignalPin(dirSignalPin),
+	  tmpAlarmPin(tmpAlarmPin),   ocpAlarmPin(ocpAlarmPin),
+	  rstSignalPin(rstSignalPin)
 {
-  Serial.print("Declared ");
-  Serial.print(BOOSTER_N);
-  Serial.println(" boosters.");
-  for(int i = 0; i < BOOSTER_N; i++) {
-    Serial.print("  - Configuring booster #");
-    Serial.print(i);
-    Serial.print(" (");
-    Serial.print(booster[i].name);
-    Serial.println(")");
+	Serial.print("Configuring booster ["); Serial.print(name); Serial.println(")");
+	trgt_power   = 0;
+	curr_power   = 0;
+	curr_accel   = 0;
+	inc_accel    = 7;
+	min_power    = 60;
+	max_power    = 255;
+	max_accel    = 40;
+	inertial     = true;
+	enabled      = true;
 
-    pinMode(booster[i].pwmSignalPin, OUTPUT); digitalWrite(booster[i].pwmSignalPin, LOW);
-    pinMode(booster[i].dirSignalPin, OUTPUT); digitalWrite(booster[i].dirSignalPin, LOW);
-    pinMode(booster[i].rstSignalPin, OUTPUT); digitalWrite(booster[i].rstSignalPin, LOW);
-    pinMode(booster[i].tmpAlarmPin, INPUT);
-    pinMode(booster[i].ocpAlarmPin, INPUT);
-  }
+	pinMode(pwmSignalPin, OUTPUT); digitalWrite(pwmSignalPin, LOW);
+	pinMode(dirSignalPin, OUTPUT); digitalWrite(dirSignalPin, LOW);
+	pinMode(rstSignalPin, OUTPUT); digitalWrite(rstSignalPin, LOW);
+	pinMode(tmpAlarmPin, INPUT);
+	pinMode(ocpAlarmPin, INPUT);
 }
 
-void boosterEmergencyStop(void)
+void Booster::reset(void)
 {
-  Serial.println("Booster emergency stop!");
-  
-  // finish current booster manager and select off
-  boosterMngrSelect(0);
+	// set power to 0
+	trgt_power   = 0;
+	curr_power   = 0;
+	curr_accel = 0;
+
+	// enable booster
+	enabled      = true;
+
+	// reset booster (with a 10 ms pulse)
+	digitalWrite(rstSignalPin, HIGH);
+	delay(10);
+	digitalWrite(rstSignalPin, LOW);
 }
 
+void Booster::on(void)
+{
+	enabled = true;
+}
+
+void Booster::off(void)
+{
+	enabled = false;
+}
+
+void Booster::set_inc_accel(int a)
+{
+#warning "TODO"
+}
+
+void Booster::set_min_power(int a)
+{
+#warning "TODO"
+}
+
+void Booster::set_max_power(int a)
+{
+#warning "TODO"
+}
+
+void Booster::set_max_accel(int a)
+{
+#warning "TODO"
+}
 

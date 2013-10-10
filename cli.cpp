@@ -1,15 +1,44 @@
-///////////////////////////////////////////////////////////////////////////////
-// CLI
-///////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * cli.cpp
+ *
+ * Serial CLI remote/sub-human interface
+ *
+ * NOTE: If you have compilation errors related to the absence of '.tokens.h',
+ *       '.clierrs.h' or '.banner_wide.h' includes, run the 'gen_code.sh'
+ *       script.
+ *
+ * ---------------------------------------------------------------------------
+ * ardccino - Arduino dual PWM/DCC controller
+ *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify it
+ *   under the terms of the GNU General Public License as published by the Free
+ *   Software Foundation; either version 3 of the License, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful, but
+ *   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *   for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ *****************************************************************************/
 
 #include <Arduino.h>
-#include "booster_mngr.h"
+#include "booster.h"
+#include "dcc.h"
+#include "pwm.h"
+#include "off.h"
 #include "cli.h"
 
-// following files are generated with 'parse_lists.sh' script using the
-// contents of 'tokens.list' and 'clierrs.list' files.
+// following files are generated with 'gen_code.sh' script using the contents
+// of 'tokens.list', 'clierrs.list' and 'banner_wide.txt' files.
 #include ".tokens.h"
 #include ".clierrs.h"
+#include ".banner_wide.h"
 
 void _ansi_cls(void)
 {
@@ -30,51 +59,39 @@ void _ansi_goto(int x, int y)
 // ACTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
-PROGMEM const char cli_about_str_0[]  = "+--- DUAL PWM/DCC CONTROLLER v1.0 ------------------------------------+";
-PROGMEM const char cli_about_str_1[]  = "|                                                                     |";
-PROGMEM const char cli_about_str_2[]  = "|  PPPPPP  WW         WW MM       MM    // DDDDDD     CCCCCC  CCCCCC  |";
-PROGMEM const char cli_about_str_3[]  = "|  PP   PP WW         WW MMMM   MMMM   //  DD   DD   CC      CC       |";
-PROGMEM const char cli_about_str_4[]  = "|  PP   PP WW    W    WW MM MM MM MM   //  DD    DD CC      CC        |";
-PROGMEM const char cli_about_str_5[]  = "|  PPPPPP  WW   WWW   WW MM  MMM  MM   //  DD    DD CC      CC        |";
-PROGMEM const char cli_about_str_6[]  = "|  PP       WW WW WW WW  MM   M   MM  //   DD    DD CC      CC        |";
-PROGMEM const char cli_about_str_7[]  = "|  PP       WWWW  WWWW   MM       MM  //   DD   DD   CC      CC       |";
-PROGMEM const char cli_about_str_8[]  = "|  PP        WW    WW    MM       MM //    DDDDDD     CCCCCC  CCCCCC  |";
-PROGMEM const char cli_about_str_9[]  = "|                                                                     |";
-PROGMEM const char cli_about_str_10[] = "+------------------------------------ DUAL PWM/DCC CONTROLLER v1.0 ---+";
-PROGMEM const char cli_about_str_11[] = "(C) 2013 Gerardo García Peña <killabytenow@gmail.com>"                  ;
-PROGMEM const char cli_about_str_12[] = "This program is free software; you can redistribute it and/or modify it";
-PROGMEM const char cli_about_str_13[] = "under the terms of the GNU General Public License as published by the"  ;
-PROGMEM const char cli_about_str_14[] = "Free Software Foundation; either version 3 of the License, or (at your" ;
-PROGMEM const char cli_about_str_15[] = "option) any later version."                                             ;
-PROGMEM const char cli_about_str_16[] = "This program is distributed in the hope that it will be useful, but"    ;
-PROGMEM const char cli_about_str_17[] = "WITHOUT ANY WARRANTY; without even the implied warranty of"             ;
-PROGMEM const char cli_about_str_18[] = "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU"      ;
-PROGMEM const char cli_about_str_19[] = "General Public License for more details."                               ;
-PROGMEM const char cli_about_str_20[] = "You should have received a copy of the GNU General Public License along";
-PROGMEM const char cli_about_str_21[] = "with this program; if not, write to the Free Software Foundation, Inc.,";
-PROGMEM const char cli_about_str_22[] = "51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA"             ;
-
-PROGMEM const char * const cli_about_str[] = {
-  cli_about_str_0,  cli_about_str_1,  cli_about_str_2,  cli_about_str_3,
-  cli_about_str_4,  cli_about_str_5,  cli_about_str_6,  cli_about_str_7,
-  cli_about_str_8,  cli_about_str_9,  cli_about_str_10, cli_about_str_11,
-  cli_about_str_12, cli_about_str_13, cli_about_str_14, cli_about_str_15,
-  cli_about_str_16, cli_about_str_17, cli_about_str_18, cli_about_str_19,
-  cli_about_str_20, cli_about_str_21, cli_about_str_22,
-};
-
-void cliAbout(void)
+void cli_about(void)
 {
   char buffer[100];
 
-  for(int i = 0; i < sizeof(cli_about_str) / sizeof(char *); i++) {
-    strcpy_P(buffer, (char *) pgm_read_word(&(cli_about_str[i])));
+  for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
+    strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
     Serial.println(buffer);
   }
 }
 
 void cliBoosterList(void)
 {
+}
+
+void cliBoosterStatus(Booster *b)
+{
+	Serial.print("Booster ["); Serial.print(b->name); Serial.print("] is ");
+	Serial.println(b->enabled ? "ON" : "OFF");
+	Serial.println("hw-config:");
+	Serial.print("  pwmSignalPin: "); Serial.print(b->pwmSignalPin);
+	Serial.print("  dirSignalPin: "); Serial.println(b->dirSignalPin);
+	Serial.print("  tmpAlarmPin: "); Serial.print(b->tmpAlarmPin);
+	Serial.print("  ocpAlarmPin: "); Serial.println(b->ocpAlarmPin);
+	Serial.print("  rstSignalPin: "); Serial.println(b->rstSignalPin);
+	Serial.print("analog-control:");
+	Serial.print("  trgt_power: "); Serial.println(b->trgt_power);
+	Serial.print("  curr_power: "); Serial.println(b->curr_power);
+	Serial.print("  curr_accel: "); Serial.println(b->curr_accel);
+	Serial.print("  inc_accel:  "); Serial.println(b->inc_accel);
+	Serial.print("  max_accel:  "); Serial.println(b->max_accel);
+	Serial.print("  min_power:  "); Serial.println(b->min_power);
+	Serial.print("  max_power:  "); Serial.println(b->max_power);
+	Serial.print("  mode:       "); Serial.println(b->inertial ? "inertial" : "direct");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,13 +121,6 @@ int cli_token(char *token)
 	return cli_token(token, NULL);
 }
 
-/*
-int cli_execute_dcc(char **token, char ntokens)
-{
-	switch(cli_token(token[1])) {
-	// COMMAND: dcc
-  	case CLI_TOKEN_ABOUT:
-*/
 int cli_execute_booster(char **token, char ntokens)
 {
 	int t, booster, a;
@@ -129,31 +139,34 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> ***
 	if(t != CLI_TOKEN_INTEGER)
 		return CLI_ERR_UNKNOWN_COMMAND;
-	if(booster < 0
-	|| booster >= BOOSTER_N)
+	if(BoosterMngr::booster(booster) == NULL)
 		return CLI_ERR_BAD_BOOSTER;
 
 	// here we need at least 3 tokens
 	CLI_TOKEN_AT_LEAST(3);
 
 	switch(cli_token(token[2], NULL)) {
+	case CLI_TOKEN_RESET:
+		CLI_TOKEN_EXPECTED(3);
+		BoosterMngr::booster(booster)->reset();
+		break;
 	// COMMAND: booster <n> power (on|off)
 	// COMMAND: booster <n> power <v>
 	case CLI_TOKEN_POWER:
 		CLI_TOKEN_EXPECTED(4);
 		switch(cli_token(token[3], &a)) {
 		case CLI_TOKEN_ON:
-			boosterOn(booster);
+			BoosterMngr::booster(booster)->on();
 			break;
 		case CLI_TOKEN_OFF:
-			boosterOff(booster);
+			BoosterMngr::booster(booster)->off();
 			break;
 		case CLI_TOKEN_INTEGER:
 			if(a < -255 || a > 255)
 				return CLI_ERR_BAD_SYNTAX;
-			if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
+			if(!pwm.enabled())
 				return CLI_ERR_BAD_MODE;
-			pwmSpeed(booster, a);
+			pwm.speed(booster, a);
 			break;
 		default:
 			return CLI_ERR_BAD_SYNTAX;
@@ -162,157 +175,112 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> status
 	case CLI_TOKEN_STATUS:
 		CLI_TOKEN_EXPECTED(3);
-		cliBoosterStatus(booster);
+		cliBoosterStatus(BoosterMngr::booster(booster));
 		break;
 	// COMMAND: booster <n> mode (direct|inertial)
-	case CLI_TOKEN_POWER:
+	case CLI_TOKEN_MODE:
 		CLI_TOKEN_EXPECTED(4);
+		if(!pwm.enabled())
+			return CLI_ERR_BAD_MODE;
 		switch(cli_token(token[3], NULL)) {
 		case CLI_TOKEN_DIRECT:
-			pwmMode(booster, PWM_OUTPUT_MODE_DIRECT);
+			BoosterMngr::booster(booster)->set_mode_direct();
 			break;
 		case CLI_TOKEN_INERTIAL:
-			pwmMode(booster, PWM_OUTPUT_MODE_INERTIAL);
+			BoosterMngr::booster(booster)->set_mode_inertial();
 			break;
 		default:
 			return CLI_ERR_BAD_SYNTAX;
 		}
 		break;
+	// COMMAND: booster <n> acceleration [<a>]
+	case CLI_TOKEN_ACCELERATION:
+		CLI_TOKEN_EXPECTED(4);
+		if(cli_token(token[3], &a) != CLI_TOKEN_INTEGER)
+			return CLI_ERR_BAD_SYNTAX;
+		if(!pwm.enabled())
+			return CLI_ERR_BAD_MODE;
+		BoosterMngr::booster(booster)->set_inc_accel(a);
+		break;
 	// COMMAND: booster <n> minimum power [<v>]
 	case CLI_TOKEN_MINIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(cli_token(token[4], NULL)
-
-	
-	...
+		if(cli_token(token[3], NULL) != CLI_TOKEN_POWER)
+			return CLI_ERR_BAD_SYNTAX;
+		if(cli_token(token[4], &a) != CLI_TOKEN_INTEGER)
+			return CLI_ERR_BAD_SYNTAX;
+		if(!pwm.enabled())
+			return CLI_ERR_BAD_MODE;
+		BoosterMngr::booster(booster)->set_min_power(a);
+		break;
+	// COMMAND: booster <n> maximum (acceleration|power) [<a>]
+	case CLI_TOKEN_MAXIMUM:
+		CLI_TOKEN_EXPECTED(5);
+		if(cli_token(token[4], &a) != CLI_TOKEN_INTEGER)
+			return CLI_ERR_BAD_SYNTAX;
+		if(!pwm.enabled())
+			return CLI_ERR_BAD_MODE;
+		switch(cli_token(token[3], NULL)) {
+		case CLI_TOKEN_ACCELERATION:
+			BoosterMngr::booster(booster)->set_max_accel(a);
+			break;
+		case CLI_TOKEN_POWER:
+			BoosterMngr::booster(booster)->set_max_power(a);
+			break;
+		default:
+			return CLI_ERR_BAD_SYNTAX;
+		}
+		break;
+	default:
+		return CLI_ERR_BAD_SYNTAX;
 	}
-
-  if(
-
-    case 2:
-      // [ALL] booster list
-      if(!strcasecmp(token[0], "booster")
-      && !strcasecmp(token[1], "list"))
-        return cli_booster_list();
-      break;
-
-    case 3:
-      // [ALL] booster <n> status
-      if(!strcasecmp(token[0], "booster")
-      && !strcasecmp(token[2], "status")) {
-        sscanf(token[1], "%d", &b);
-        return cli_booster_status(b);
-      }
-
-      // [DCC] dcc mode (stateless|stateful)
-      if(!strcasecmp(token[0], "dcc")
-      && !strcasecmp(token[1], "mode")) {
-        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "dcc"))
-          goto bad_mode;
-        a = !strcmpcase(token[2], "stateful");
-        sscanf(token[1], "%d", &b);
-        return cli_booster_status(b);
-      }
-      break;
-
-    case 4:
-      // [ALL] booster <n> ...
-      if(!strcasecmp(token[0], "booster")) {
-        sscanf(token[1], "%d", &b);
-
-        // [ALL] booster <n> power (off|on)
-        if(!strcasecmp(token[2], "power")) {
-          if(strcasecmp(token[3], "on") && strcasecmp(token[3], "off"))
-            goto bad_syntax;
-          return cli_booster_status(b);
-        }
-
-        // [PWM] booster <n> ...
-        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
-          goto bad_mode;
-
-        // [PWM] booster <n> speed [<v>]
-        if(!strcasecmp(token[2], "speed")) {
-          sscanf(token[3], "%d", &a);
-          return cli_booster_status(b);
-        }
-
-        // [PWM] booster <n> mode (direct|inertial)
-        if(!strcasecmp(token[2], "mode")) {
-          a = !strcasecmp(token[3], "inertial");
-          return cli_booster_status(b);
-        }
-
-        // [PWM] booster <n> acceleration [<a>]
-        if(!strcasecmp(token[2], "acceleration")) {
-          sscanf(token[3], "%d", &a);
-          return cli_booster_status(b);
-        }
-
-      }
-      break;
-
-    case 5:
-      // [ALL] booster <n> ...
-      if(!strcasecmp(token[0], "booster")) {
-        sscanf(token[1], "%d", &b);
-
-        // [PWM] booster <n> ...
-        if(strcasecmp(booster_mngr[booster_mngr_selected].name, "pwm"))
-          goto bad_mode;
-
-        // [PWM] booster <n> minimum speed [<v>]
-        if(!strcasecmp(token[2], "minimum")
-        && !strcasecmp(token[3], "speed")) {
-          sscanf(token[4], "%d", &a);
-          return cli_booster_status(b);
-        }
-
-        // [PWM] booster <n> maximum acceleration [<a>]
-        if(!strcasecmp(token[2], "maximum")
-        && !strcasecmp(token[3], "acceleration")) {
-          sscanf(token[4], "%d", &a);
-          return cli_booster_status(b);
-        }
-      }
-      break;
-
-    default:
-      // [DCC] dcc send [service [acked]] command <bytes...>
-      // [DCC] dcc read <v> [mode (paged|direct)]
-  }
-
+	return CLI_ERR_OK;
 }
+
+// PENDING COMMANDS
+// COMMAND: dcc mode (pass_through|stateful)
+// COMMAND: dcc [!] <n> speed [4bit|5bit|7bit] [+-]<v> [acked]
+// COMMAND: dcc [!] <n> f <f> (on|off) [acked]
+// COMMAND: dcc [!] <n> analog <f> <v> [acked]
+// COMMAND: dcc [!] <n> address (advanced|normal) [acked]
+// COMMAND: dcc [!] <n> ack (service|railcom|off)
+// COMMAND: dcc [!] <n> send [service] command <bytes...> [acked]
+// COMMAND: dcc [!] <n> read <v> [mode (paged|direct)]
+int cli_execute_dcc(char **token, char ntokens)
+{
+	return CLI_ERR_NOT_IMPLEMENTED;
+}
+
 int cli_execute(char **token, char ntokens)
 {
 	switch(cli_token(token[0], NULL)) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
-		if(ntokens > 1) goto too_many_params;
+		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
 		cli_about();
 		break;
-
 	// COMMAND: off
-	// COMMAND: pwm
 	case CLI_TOKEN_OFF:
-	case CLI_TOKEN_PWM:
-		if(ntokens > 1) goto too_many_params;
-		boosterMngrSelectByName(token[0]);
+		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
+		if(off.enabled()) return CLI_ERR_MODE_ALREADY_ENABLED;
+		off.enable();
 		break;
-
+	// COMMAND: pwm
+	case CLI_TOKEN_PWM:
+		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
+		if(pwm.enabled()) return CLI_ERR_MODE_ALREADY_ENABLED;
+		pwm.enable();
+		break;
 	// COMMAND:  dcc
 	// COMMANDS: dcc ***
 	case CLI_TOKEN_DCC:
-		if(ntokens == 1)
-			boosterMngrSelectByName(token[0]);
-		else
+		if(ntokens != 1)
 			return cli_execute_dcc(token, ntokens);
+		dcc.enable();
 		break;
-	
 	// COMMANDS: booster ***
 	case CLI_TOKEN_BOOSTER:
 		return cli_execute_booster(token, ntokens);
-
 	// other
 	default:
 		return CLI_ERR_UNKNOWN_COMMAND;
@@ -325,6 +293,7 @@ void cli_parse(char *buffer)
 {
 	char *p, *token[10], ntokens;
 	int b, a;
+	char err[CLI_ERRS_MAX_LEN];
 
 	// tokenize
 	ntokens = 0;
@@ -346,29 +315,9 @@ void cli_parse(char *buffer)
 	if(!ntokens)
 		return;
 
-	switch(cli_execute(token, ntokens)) {
-	case CLI_ERR_UNKNOWN_COMMAND:
-		Serial.println("error: Unknown command");
-		break;
-	case CLI_ERR_NEED_MORE_PARAMS:
-		Serial.println("error: need more parameters");
-		break;
-	case CLI_ERR_TOO_MANY_PARAMS:
-		Serial.println("error: too many parameters");
-		break;
-	case CLI_ERR_BAD_SYNTAX:
-		Serial.println("error: Bad syntax.");
-		break;
-	case CLI_ERR_BAD_MODE:
-		Serial.println("error: This command cannot be executed in current mode.");
-		break;
-	case CLI_ERR_BAD_BOOSTER:
-	case CLI_ERR_OK:
-		Serial.println("Ok");
-		break;
-	default:
-		Serial.println("error: Unknown error");
-	}
+	// execute command and print error/ok string
+	strcpy_P(err, (char *) pgm_read_word(&(cli_errs[cli_execute(token, ntokens)])));
+	Serial.println(err);
 }
 
 void cliHandler(void)
