@@ -23,8 +23,6 @@
  *
  *****************************************************************************/
 
-#include <UTFT.h>
-#include <Arduino.h>
 
 #include "hwgui.h"
 #include "booster.h"
@@ -48,14 +46,6 @@ extern uint8_t SevenSegNumFont[];
 uint16_t tft_xsize;
 uint16_t tft_ysize;
 
-#define TFT_SCK       44
-#define TFT_SDI_MOSI  46
-#define TFT_DC        48
-#define TFT_RESET     50
-#define TFT_CS        52
-
-UTFT tft(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
-
 void utftSetup(void)
 {
   tft.InitLCD();
@@ -67,16 +57,6 @@ void utftSetup(void)
 ///////////////////////////////////////////////////////////////////////////////
 // JOYSTICK
 ///////////////////////////////////////////////////////////////////////////////
-
-const int joyAxisXPin  = A0;
-const int joyAxisYPin  = A1;
-const int joyButtonPin = A2;
-const int joyAxisXRange = 1023;
-const int joyAxisYRange = 1023;
-const int joyButton = A2;
-
-int joyStatusNow = 0;
-int joyStatusOld = 0;
 
 #define JOY_UP     0x01
 #define JOY_DOWN   0x02
@@ -104,17 +84,19 @@ void joySetup(void)
 
 void joyPrint()
 {
-  Serial.print("joyRead() =");
-  Serial.print(analogRead(joyButtonPin));
-  if(joyMoveUp())         Serial.print(" UP");
-  if(joyMoveDown())       Serial.print(" DOWN");
-  if(joyMoveLeft())       Serial.print(" LEFT");
-  if(joyMoveRight())      Serial.print(" RIGHT");
-  if(joyMove(JOY_BUTTON)) Serial.println(" [XX]"); else Serial.println(" [  ]");
+	Serial.print("joyRead() =");
+	Serial.print(analogRead(JOY_PIN_BUTTON));
+	if(joyMoveUp())         Serial.print(" UP");
+	if(joyMoveDown())       Serial.print(" DOWN");
+	if(joyMoveLeft())       Serial.print(" LEFT");
+	if(joyMoveRight())      Serial.print(" RIGHT");
+	if(joyMove(JOY_BUTTON)) Serial.println(" [XX]"); else Serial.println(" [  ]");
 }
 
 int joyRead()
 {
+  static int joyStatusNow = 0;
+  static int joyStatusOld = 0;
   int v;
   
   // reset joystick status
@@ -122,17 +104,17 @@ int joyRead()
   joyStatusNow = 0;
 
   // update X axis
-  v = analogRead(joyAxisXPin);
-  if     (v < (joyAxisXRange >> 2))                        joyStatusNow |= JOY_LEFT;
-  else if(v > (joyAxisXRange >> 1) + (joyAxisXRange >> 2)) joyStatusNow |= JOY_RIGHT;
+  v = analogRead(JOY_PIN_AXIS_X);
+  if     (v < (JOY_RANGE_AXIS_X >> 2))                           joyStatusNow |= JOY_LEFT;
+  else if(v > (JOY_RANGE_AXIS_X >> 1) + (JOY_RANGE_AXIS_X >> 2)) joyStatusNow |= JOY_RIGHT;
   
   // update Y axis
-  v = analogRead(joyAxisYPin);
-  if     (v < (joyAxisYRange >> 2))                        joyStatusNow |= JOY_UP;
-  else if(v > (joyAxisYRange >> 1) + (joyAxisYRange >> 2)) joyStatusNow |= JOY_DOWN;
+  v = analogRead(JOY_PIN_AXIS_Y);
+  if     (v < (JOY_RANGE_AXIS_Y >> 2))                           joyStatusNow |= JOY_UP;
+  else if(v > (JOY_RANGE_AXIS_Y >> 1) + (JOY_RANGE_AXIS_Y >> 2)) joyStatusNow |= JOY_DOWN;
   
   // update button
-  if(analogRead(joyButtonPin) == 0) joyStatusNow |= JOY_BUTTON;
+  if(analogRead(JOY_PIN_BUTTON) == 0) joyStatusNow |= JOY_BUTTON;
   
   // debug
   //joyPrint();
@@ -143,9 +125,7 @@ int joyRead()
 ///////////////////////////////////////////////////////////////////////////////
 
 // GLOBAL HANDLER
-struct ui_screen *ui_curr = NULL;
-
-void uiHandler(void)
+void UIScreen::handle(void)
 {
   struct ui_screen *next_ui;
   static int last_key = 0;
