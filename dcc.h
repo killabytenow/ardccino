@@ -63,6 +63,4 @@ public:
 	struct dcc_buffer_struct *send_msg(bool service, byte *msg, uint8_t len);
 };
 
-extern DccMngr dcc;
-
 #endif

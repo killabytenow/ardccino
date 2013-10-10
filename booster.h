@@ -67,6 +67,4 @@ public:
 	void set_mode_direct(void);
 };
 
-//extern Booster *boosters[BOOSTERS_N];
-
 #endif

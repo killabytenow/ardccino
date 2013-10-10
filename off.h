@@ -36,6 +36,4 @@ public:
 	void refresh(void);
 };
 
-extern OffMngr off;
-
 #endif
