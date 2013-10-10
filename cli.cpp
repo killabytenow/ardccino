@@ -28,11 +28,14 @@
  *****************************************************************************/
 
 #include <Arduino.h>
+#include "config.h"
 #include "booster.h"
 #include "dcc.h"
 #include "pwm.h"
 #include "off.h"
 #include "cli.h"
+
+#ifdef CLI_ENABLED
 
 // following files are generated with 'gen_code.sh' script using the contents
 // of 'tokens.list', 'clierrs.list' and 'banner_wide.txt' files.
@@ -326,4 +329,4 @@ void cliHandler(void)
 
 void (*current_ui_handler)(void);
 
-
+#endif
