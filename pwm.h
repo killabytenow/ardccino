@@ -46,6 +46,4 @@ public:
 	void switch_dir(int b);
 };
 
-extern PwmMngr pwm;
-
 #endif
