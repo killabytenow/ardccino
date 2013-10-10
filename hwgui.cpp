@@ -1,3 +1,28 @@
+/*****************************************************************************
+ * hwgui.cpp
+ *
+ * Hardware graphical user interface. For use with LCD/TFT touch screens.
+ *
+ * ---------------------------------------------------------------------------
+ * ardccino - Arduino dual PWM/DCC controller
+ *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify it
+ *   under the terms of the GNU General Public License as published by the Free
+ *   Software Foundation; either version 3 of the License, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful, but
+ *   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *   for more details.
+ *
+ *   You should have received a copy of the GNU General Public License along
+ *   with this program; if not, write to the Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ *****************************************************************************/
+
 #include <UTFT.h>
 #include <Arduino.h>
 
@@ -6,6 +31,10 @@
 #include "booster_mngr.h"
 #include "error.h"
 #include "tinyfont.h"
+
+// following files are generated with 'gen_code.sh' script using the contents
+// of 'banner.txt' file.
+#include ".banner.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // UTFT
@@ -201,33 +230,6 @@ struct ui_pwm_struct {
 //  int       current_pwm;
 //} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
 
-
-PROGMEM const char ui_hello_str_0[]  = "+-- DUAL PWM/DCC CONTROLLER v1.0 -----+";
-PROGMEM const char ui_hello_str_1[]  = "|                                     |";
-PROGMEM const char ui_hello_str_2[]  = "| PPP  W   W M   M   / DDD   CCC  CCC |";
-PROGMEM const char ui_hello_str_3[]  = "| P  P W   W MM MM   / D  D C    C    |";
-PROGMEM const char ui_hello_str_4[]  = "| P  P W   W M M M  /  D  D C    C    |";
-PROGMEM const char ui_hello_str_5[]  = "| PPP  W W W M M M  /  D  D C    C    |";
-PROGMEM const char ui_hello_str_6[]  = "| P    W W W M   M  /  D  D C    C    |";
-PROGMEM const char ui_hello_str_7[]  = "| P    WW WW M   M  /  D  D C    C    |";
-PROGMEM const char ui_hello_str_8[]  = "| P    W   W M   M /   DDD   CCC  CCC |";
-PROGMEM const char ui_hello_str_9[]  = "|                                     |";
-PROGMEM const char ui_hello_str_10[] = "+-------------------------------------+";
-PROGMEM const char ui_hello_str_11[] = "(C) 2013 Gerardo García Peña";
-PROGMEM const char ui_hello_str_12[] = "              <killabytenow@gmail.com>";
-PROGMEM const char ui_hello_str_13[] = "This program is free software; you can";
-PROGMEM const char ui_hello_str_14[] = "redistribute it and/or modify it under";
-PROGMEM const char ui_hello_str_15[] = "the terms of the GNU General Public License as published by the Free";
-PROGMEM const char ui_hello_str_16[] = "Software Foundation; either version 3 of the License, or (at your option)";
-PROGMEM const char ui_hello_str_17[] = "any later version.";
-PROGMEM char const * const ui_hello_str[] = {
-  ui_hello_str_0,  ui_hello_str_1,  ui_hello_str_2,  ui_hello_str_3,  ui_hello_str_4,
-  ui_hello_str_5,  ui_hello_str_6,  ui_hello_str_7,  ui_hello_str_8,  ui_hello_str_9,
-  ui_hello_str_10, ui_hello_str_11, ui_hello_str_12, ui_hello_str_13, ui_hello_str_14,
-  ui_hello_str_15, ui_hello_str_16, ui_hello_str_17,
-};
-
-
 void ui_hello_draw(void)
 {
   char buffer[100];
@@ -244,8 +246,8 @@ void ui_hello_draw(void)
   tft.setColor(255, 255, 0);
   tft.setBackColor(0, 0, 255);
   int y = 12;
-  for(int i = 0; i < sizeof(ui_hello_str) / sizeof(char *); i++) {
-    strcpy_P(buffer, (char *) pgm_read_word(&(ui_hello_str[i])));
+  for(int i = 0; i < sizeof(banner) / sizeof(char *); i++) {
+    strcpy_P(buffer, (char *) pgm_read_word(&(banner[i])));
     tft.print(buffer, 1, y);
     y += 8;
   }
@@ -284,18 +286,16 @@ void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 	tft.fillRoundRect(x1, y1, x2, y2);
 	tft.setColor(VGA_GRAY);
 	tft.drawRoundRect(x1, y1, x2, y2);
-	l = strlen(booster_mngr[booster_mngr_selected].name);
-	tft.print(booster_mngr[booster_mngr_selected].name,
-			(x2 + x1 - l) >> 1, (y2 + y1 - 12) >> 1);
+	tft.print("Off", (x2 + x1 - 3*8) >> 1, (y2 + y1 - 12) >> 1);
 
-	Serial.print(ui->current == 0 ? ">> " : "   ");
-	Serial.print("Signal mode\t<");
-	Serial.print(booster_mngr[booster_mngr_selected].name);
-	Serial.print(">   \r\n");
-	Serial.print("\r\n");
-	Serial.print(ui->current == 1 ? ">> " : "   ");
-	Serial.print("RETURN");
-	Serial.print("\r\n");
+	//Serial.print(ui->current == 0 ? ">> " : "   ");
+	//Serial.print("Signal mode\t<");
+	//Serial.print(booster_mngr[booster_mngr_selected].name);
+	//Serial.print(">   \r\n");
+	//Serial.print("\r\n");
+	//Serial.print(ui->current == 1 ? ">> " : "   ");
+	//Serial.print("RETURN");
+	//Serial.print("\r\n");
 }
 
 struct ui_screen *ui_config_global_evh(struct ui_config_global_struct *ui, int event)
