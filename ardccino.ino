@@ -28,19 +28,33 @@
 #include "booster.h"
 #include "dcc.h"
 
+#define BOOSTERS_N (sizeof(boosters) / sizeof(Booster *))
+
+///////////////////////////////////////////////////////////////////////////////
+// CONFIGURE BOOSTERS
+//
+// Configure names and pins assigned to each booster.
+//
+// NOTE:
 //   - Pins 5 and 6 are paired on timer0
 //   - Pins 9 and 10 are paired on timer1
 //   - Pins 3 and 11 are paired on timer2
-Booster *boosters[BOOSTERS_N] = {
+///////////////////////////////////////////////////////////////////////////////
+
+Booster *boosters[] = {
 	Booster("booster#1",  3,  2,   4,  5, 14),
 	Booster("booster#2",  9,  6,   7,  8, 14),
 	Booster("booster#3", 10, 11,  12, 13, 14),
 //	Booster("service",   xx, xx,  xx, xx, xx),
 };
 
-OffMngr off(boosters, 3);
-PwmMngr pwm(boosters, 3);
-DccMngr dcc(boosters, 3, -1);
+///////////////////////////////////////////////////////////////////////////////
+// CONFIGURE BOOSTER MANAGERS
+//
+// Following code is usually ok
+OffMngr off(boosters, BOOSTERS_N);
+PwmMngr pwm(boosters, BOOSTERS_N);
+DccMngr dcc(boosters, BOOSTERS_N, -1);
 //DccMngr dcc(boosters, 2, 1);
 
 void setup()
