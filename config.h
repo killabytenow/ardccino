@@ -104,6 +104,9 @@ extern DccMngr dcc;
 //     you can use the standard values 75, 110, 300, 1200, 2400, 4800, 9600,
 //     19200, 38400, 57600 and 115200 bit.
 //     The best, if you can, is to use 115200.
+//     NOTE: If you use the 'make monitor' feature remember that you need to
+//           sync this parameter with the MONITOR_BAUDRATE makefile environment
+//           variable.
 //
 //   CLI
 //
@@ -112,7 +115,7 @@ extern DccMngr dcc;
 
 #ifdef CLI_ENABLED
 #include "cli.h"
-#define CLI_SERIAL_SPEED  9600
+#define CLI_SERIAL_SPEED  115200
 #define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
 #ifdef __DECLARE_GLOBALS__
 Cli cli = Cli();
