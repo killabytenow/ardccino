@@ -36,11 +36,8 @@ AVRDUDE_ARD_BAUDRATE   = 115200
 AVRDUDE_ARD_PROGRAMMER = arduino
 USER_LIB_PATH          = ./libraries/
 
-%.h::
-	touch $@
-
-.tokens.h .clierrs.h .banner_wide.h .banner.h : gen_code.sh tokens.list clierrs.list banner.txt banner_wide.txt
-	./gen_code.sh
-
 include $(ARDUINO_DIR)/Arduino.mk
+
+auto_tokens.h auto_clierrs.h auto_banner_wide.h auto_banner.h : gen_code.sh tokens.list clierrs.list banner.txt banner_wide.txt
+	./gen_code.sh
 

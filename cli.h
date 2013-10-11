@@ -30,5 +30,39 @@
 #ifndef __CLI_H__
 #define __CLI_H__
 
+#include "config.h"
+
+#ifdef CLI_ENABLED
+
+class Cli {
+	private:
+		char input[255];
+		int  input_len;
+		int  input_pos;
+
+		// command actions
+		void about(void);
+		void booster_list(void);
+		void booster_status(Booster *b);
+
+		// read input
+		void input_add(char c);
+		void input_del(void);
+		void input_reset(void);
+
+		// parsing and execution
+		int parse_token(char *token, int *i);
+		int parse_token(char *token);
+		int execute_booster(char **token, char ntokens);
+		int execute_dcc(char **token, char ntokens);
+		int execute(char **token, char ntokens);
+		void parse(char *buffer);
+
+	public:
+		Cli(void);
+		void input_read(void);
+};
+
+#endif
 
 #endif

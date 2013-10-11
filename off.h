@@ -30,7 +30,7 @@
 
 class OffMngr : public BoosterMngr {
 public:
-	OffMngr(Booster *b, int n);
+	OffMngr(Booster *b, int n) : BoosterMngr(b, n) { };
 	void init(void);
 	void fini(void);
 	void refresh(void);

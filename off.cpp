@@ -28,9 +28,9 @@
 
 void OffMngr::init(void)
 {
-	for(int b = 0; b < boosters_n; b++) {
-		digitalWrite(boosters[b]->pwmSignalPin, LOW);
-		digitalWrite(boosters[b]->dirSignalPin, LOW);
+	for(int b = 0; b < nboosters; b++) {
+		digitalWrite(boosters[b].pwmSignalPin, LOW);
+		digitalWrite(boosters[b].dirSignalPin, LOW);
 	  }
 }
 

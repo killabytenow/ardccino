@@ -29,6 +29,8 @@
 #include "off.h"
 #include "error.h"
 
+BoosterMngr *BoosterMngr::current = NULL;
+
 BoosterMngr *BoosterMngr::enable(void)
 {
 	if(BoosterMngr::current)

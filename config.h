@@ -33,6 +33,7 @@
 #include "off.h"
 #include "pwm.h"
 #include "dcc.h"
+#include "ansi.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // CONFIGURE BOOSTERS
@@ -52,6 +53,7 @@ Booster boosters[] = {
 	Booster("booster#3", 10, 11,  12, 13, 14),
 //	Booster("service",   xx, xx,  xx, xx, xx),
 };
+#define BOOSTERS_N (sizeof(boosters) / sizeof(Booster *))
 #else
 extern Booster boosters;
 #endif
@@ -79,9 +81,9 @@ extern Booster boosters;
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifdef __DECLARE_GLOBALS__
-OffMngr off(boosters, BOOSTERS_N);
-PwmMngr pwm(boosters, BOOSTERS_N);
-DccMngr dcc(boosters, BOOSTERS_N, -1);
+OffMngr off = OffMngr(boosters, BOOSTERS_N);
+PwmMngr pwm = PwmMngr(boosters, BOOSTERS_N);
+DccMngr dcc = DccMngr(boosters, BOOSTERS_N, -1);
 //DccMngr dcc(boosters, 2, 1);
 #else
 extern OffMngr off;
@@ -109,7 +111,14 @@ extern DccMngr dcc;
 #define CLI_ENABLED 1
 
 #ifdef CLI_ENABLED
+#include "cli.h"
 #define CLI_SERIAL_SPEED  9600
+#define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
+#ifdef __DECLARE_GLOBALS__
+Cli cli = Cli();
+#else
+extern Cli cli;
+#endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -119,6 +128,9 @@ extern DccMngr dcc;
 // not need to be edited.
 //
 
+//#define ENABLE_SCREEN 1
+
+#ifdef ENABLE_SCREEN
 #ifdef __DECLARE_GLOBALS__
 
 // Elecfreaks TFT01-2.2SP 2.2 SPI 240 x 320 TFT LCD Module
@@ -132,6 +144,7 @@ UTFT tft(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
 #else
 extern UTFT tft;
 #endif
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // CONFIGURE JOYSTICK
@@ -139,7 +152,7 @@ extern UTFT tft;
 // Joystick configuration.
 //
 
-#define JOY_ENABLED 1
+//#define JOY_ENABLED 1
 
 #ifdef JOY_ENABLED
 #define JOY_PIN_AXIS_X    A0
@@ -150,6 +163,24 @@ extern UTFT tft;
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+// CONFIGURE HWGUI
+//
+// Hardware GUI configuration
+//
+
+//#define HWGUI_ENABLE 1
+
+#ifndef JOY_ENABLED
+#warning "Cannot enable hardware gui without an input method (enable joystick at least)"
+#undef HWGUI_ENABLE
+#endif
+
+#ifndef ENABLE_SCREEN
+#warning "Cannot enable hardware gui without a screen or video output"
+#undef HWGUI_ENABLE
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 // DON'T TOUCH THE FOLLOWING CODE
 //
 //   ... it's ok and works, really
@@ -157,6 +188,10 @@ extern UTFT tft;
 
 #ifndef SERVICE_TRACK
 #define SERVICE_TRACK -1
+#endif
+
+#if (!defined(HWGUI_ENABLE) && !defined(CLI_ENABLED))
+#error "Is stupid to build a controller without control input methods - enable serial CLI at least"
 #endif
 
 #endif

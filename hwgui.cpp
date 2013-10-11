@@ -23,12 +23,14 @@
  *
  *****************************************************************************/
 
-
+#include "config.h"
 #include "hwgui.h"
 #include "booster.h"
 #include "booster_mngr.h"
 #include "error.h"
-#include "tinyfont.h"
+#include "fonts.h"
+
+#ifdef HWGUI_ENABLE
 
 // following files are generated with 'gen_code.sh' script using the contents
 // of 'banner.txt' file.
@@ -38,17 +40,11 @@
 // UTFT
 ///////////////////////////////////////////////////////////////////////////////
 
-// Declare which fonts we will be using
-extern uint8_t SmallFont[];
-extern uint8_t BigFont[];
-extern uint8_t SevenSegNumFont[];
-
 uint16_t tft_xsize;
 uint16_t tft_ysize;
 
 void utftSetup(void)
 {
-  tft.InitLCD();
   tft.setFont(TinyFont);
   tft_xsize = tft.getDisplayXSize();
   tft_ysize = tft.getDisplayYSize();
@@ -57,15 +53,6 @@ void utftSetup(void)
 ///////////////////////////////////////////////////////////////////////////////
 // JOYSTICK
 ///////////////////////////////////////////////////////////////////////////////
-
-#define JOY_UP     0x01
-#define JOY_DOWN   0x02
-#define JOY_LEFT   0x04
-#define JOY_RIGHT  0x08
-#define JOY_BUTTON 0x10
-
-#define joyMove(x)         (joyStatusNow & (x))
-#define joyPressed(x)      (!(joyStatusOld & (x)) && (joyStatusNow & (x)))
 
 #define joyMoveUp()        joyMove(JOY_UP)
 #define joyMoveDown()      joyMove(JOY_DOWN)
@@ -77,48 +64,6 @@ void utftSetup(void)
 #define joyPressedLeft()   joyPressed(JOY_LEFT)
 #define joyPressedRight()  joyPressed(JOY_RIGHT)
 #define joyPressedButton() joyPressed(JOY_BUTTON)
-
-void joySetup(void)
-{
-}
-
-void joyPrint()
-{
-	Serial.print("joyRead() =");
-	Serial.print(analogRead(JOY_PIN_BUTTON));
-	if(joyMoveUp())         Serial.print(" UP");
-	if(joyMoveDown())       Serial.print(" DOWN");
-	if(joyMoveLeft())       Serial.print(" LEFT");
-	if(joyMoveRight())      Serial.print(" RIGHT");
-	if(joyMove(JOY_BUTTON)) Serial.println(" [XX]"); else Serial.println(" [  ]");
-}
-
-int joyRead()
-{
-  static int joyStatusNow = 0;
-  static int joyStatusOld = 0;
-  int v;
-  
-  // reset joystick status
-  joyStatusOld = joyStatusNow;
-  joyStatusNow = 0;
-
-  // update X axis
-  v = analogRead(JOY_PIN_AXIS_X);
-  if     (v < (JOY_RANGE_AXIS_X >> 2))                           joyStatusNow |= JOY_LEFT;
-  else if(v > (JOY_RANGE_AXIS_X >> 1) + (JOY_RANGE_AXIS_X >> 2)) joyStatusNow |= JOY_RIGHT;
-  
-  // update Y axis
-  v = analogRead(JOY_PIN_AXIS_Y);
-  if     (v < (JOY_RANGE_AXIS_Y >> 2))                           joyStatusNow |= JOY_UP;
-  else if(v > (JOY_RANGE_AXIS_Y >> 1) + (JOY_RANGE_AXIS_Y >> 2)) joyStatusNow |= JOY_DOWN;
-  
-  // update button
-  if(analogRead(JOY_PIN_BUTTON) == 0) joyStatusNow |= JOY_BUTTON;
-  
-  // debug
-  //joyPrint();
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // INTERFACE
@@ -418,3 +363,4 @@ struct ui_screen *ui_pwm_evh(struct ui_pwm_struct *ui, int event)
   return NULL;
 }
 
+#endif

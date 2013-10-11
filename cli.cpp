@@ -39,44 +39,62 @@
 
 // following files are generated with 'gen_code.sh' script using the contents
 // of 'tokens.list', 'clierrs.list' and 'banner_wide.txt' files.
-#include ".tokens.h"
-#include ".clierrs.h"
-#include ".banner_wide.h"
+#include "auto_tokens.h"
+#include "auto_clierrs.h"
+#include "auto_banner_wide.h"
 
-void _ansi_cls(void)
+Cli::Cli(void)
 {
-  Serial.print("\x1B[1J");
-  Serial.print("\x1B[1;1f");
+	input_reset();
 }
 
-void _ansi_goto(int x, int y)
+void Cli::input_reset(void)
 {
-  Serial.print("\x1B[");
-  Serial.print(y);
-  Serial.print(';');
-  Serial.print(x);
-  Serial.print('f');
+	*input = '\0';
+	input_len = -1;
+	input_pos = 0;
+	//last_nbc = 0;
+}
+
+void Cli::input_add(char c)
+{
+	if(input_len + 1 < sizeof(input))
+		return;
+	input[input_len++] = c;
+	input[input_len] = '\0';
+	input_pos = 0;
+	Serial.print(c);
+}
+
+void Cli::input_del(void)
+{
+	if(input_len > 0)
+		return;
+	input[--input_len] = '\0';
+	input_pos = 0;
+	Serial.print(ANSI_CUB(1) ANSI_ED(0));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // ACTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
-void cli_about(void)
+void Cli::about(void)
 {
-  char buffer[100];
+	char buffer[100];
 
-  for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
-    strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
-    Serial.println(buffer);
-  }
+	for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
+		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
+		Serial.println(buffer);
+	}
 }
 
-void cliBoosterList(void)
+void Cli::booster_list(void)
 {
+#warning "TODO"
 }
 
-void cliBoosterStatus(Booster *b)
+void Cli::booster_status(Booster *b)
 {
 	Serial.print("Booster ["); Serial.print(b->name); Serial.print("] is ");
 	Serial.println(b->enabled ? "ON" : "OFF");
@@ -115,27 +133,27 @@ void cliBoosterStatus(Booster *b)
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
-int cli_token(char *token, int *i)
+int Cli::parse_token(char *token, int *i)
 {
 }
 
-int cli_token(char *token)
+int Cli::parse_token(char *token)
 {
-	return cli_token(token, NULL);
+	return parse_token(token, NULL);
 }
 
-int cli_execute_booster(char **token, char ntokens)
+int Cli::execute_booster(char **token, char ntokens)
 {
 	int t, booster, a;
 
 	// here we need at least 2 tokens
 	CLI_TOKEN_AT_LEAST(2);
-	t = cli_token(token[1], &booster);
+	t = parse_token(token[1], &booster);
 
 	// COMMAND: booster list
 	if(t == CLI_TOKEN_LIST) {
 		CLI_TOKEN_EXPECTED(2);
-		cliBoosterList();
+		booster_list();
 		return CLI_ERR_OK;
 	}
 
@@ -148,7 +166,7 @@ int cli_execute_booster(char **token, char ntokens)
 	// here we need at least 3 tokens
 	CLI_TOKEN_AT_LEAST(3);
 
-	switch(cli_token(token[2], NULL)) {
+	switch(parse_token(token[2], NULL)) {
 	case CLI_TOKEN_RESET:
 		CLI_TOKEN_EXPECTED(3);
 		BoosterMngr::booster(booster)->reset();
@@ -157,7 +175,7 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> power <v>
 	case CLI_TOKEN_POWER:
 		CLI_TOKEN_EXPECTED(4);
-		switch(cli_token(token[3], &a)) {
+		switch(parse_token(token[3], &a)) {
 		case CLI_TOKEN_ON:
 			BoosterMngr::booster(booster)->on();
 			break;
@@ -178,14 +196,14 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> status
 	case CLI_TOKEN_STATUS:
 		CLI_TOKEN_EXPECTED(3);
-		cliBoosterStatus(BoosterMngr::booster(booster));
+		booster_status(BoosterMngr::booster(booster));
 		break;
 	// COMMAND: booster <n> mode (direct|inertial)
 	case CLI_TOKEN_MODE:
 		CLI_TOKEN_EXPECTED(4);
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(cli_token(token[3], NULL)) {
+		switch(parse_token(token[3], NULL)) {
 		case CLI_TOKEN_DIRECT:
 			BoosterMngr::booster(booster)->set_mode_direct();
 			break;
@@ -199,7 +217,7 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> acceleration [<a>]
 	case CLI_TOKEN_ACCELERATION:
 		CLI_TOKEN_EXPECTED(4);
-		if(cli_token(token[3], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[3], &a) != CLI_TOKEN_INTEGER)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
@@ -208,9 +226,9 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> minimum power [<v>]
 	case CLI_TOKEN_MINIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(cli_token(token[3], NULL) != CLI_TOKEN_POWER)
+		if(parse_token(token[3], NULL) != CLI_TOKEN_POWER)
 			return CLI_ERR_BAD_SYNTAX;
-		if(cli_token(token[4], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[4], &a) != CLI_TOKEN_INTEGER)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
@@ -219,11 +237,11 @@ int cli_execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> maximum (acceleration|power) [<a>]
 	case CLI_TOKEN_MAXIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(cli_token(token[4], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[4], &a) != CLI_TOKEN_INTEGER)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(cli_token(token[3], NULL)) {
+		switch(parse_token(token[3], NULL)) {
 		case CLI_TOKEN_ACCELERATION:
 			BoosterMngr::booster(booster)->set_max_accel(a);
 			break;
@@ -249,18 +267,18 @@ int cli_execute_booster(char **token, char ntokens)
 // COMMAND: dcc [!] <n> ack (service|railcom|off)
 // COMMAND: dcc [!] <n> send [service] command <bytes...> [acked]
 // COMMAND: dcc [!] <n> read <v> [mode (paged|direct)]
-int cli_execute_dcc(char **token, char ntokens)
+int Cli::execute_dcc(char **token, char ntokens)
 {
 	return CLI_ERR_NOT_IMPLEMENTED;
 }
 
-int cli_execute(char **token, char ntokens)
+int Cli::execute(char **token, char ntokens)
 {
-	switch(cli_token(token[0], NULL)) {
+	switch(parse_token(token[0], NULL)) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
 		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
-		cli_about();
+		about();
 		break;
 	// COMMAND: off
 	case CLI_TOKEN_OFF:
@@ -278,12 +296,12 @@ int cli_execute(char **token, char ntokens)
 	// COMMANDS: dcc ***
 	case CLI_TOKEN_DCC:
 		if(ntokens != 1)
-			return cli_execute_dcc(token, ntokens);
+			return execute_dcc(token, ntokens);
 		dcc.enable();
 		break;
 	// COMMANDS: booster ***
 	case CLI_TOKEN_BOOSTER:
-		return cli_execute_booster(token, ntokens);
+		return execute_booster(token, ntokens);
 	// other
 	default:
 		return CLI_ERR_UNKNOWN_COMMAND;
@@ -292,10 +310,10 @@ int cli_execute(char **token, char ntokens)
 	return CLI_ERR_OK;
 }
 
-void cli_parse(char *buffer)
+void Cli::parse(char *buffer)
 {
 	char *p, *token[10], ntokens;
-	int b, a;
+	int b, a, r;
 	char err[CLI_ERRS_MAX_LEN];
 
 	// tokenize
@@ -319,14 +337,37 @@ void cli_parse(char *buffer)
 		return;
 
 	// execute command and print error/ok string
-	strcpy_P(err, (char *) pgm_read_word(&(cli_errs[cli_execute(token, ntokens)])));
+	r = ntokens < 10
+		? execute(token, ntokens)
+		: CLI_ERR_BAD_SYNTAX;
+
+	// print error/ok string
+	strcpy_P(err, (char *) pgm_read_word(&(cli_errs[r])));
 	Serial.println(err);
 }
 
-void cliHandler(void)
+void Cli::input_read(void)
 {
-}
+	if(input_len < 0) {
+		Serial.println();
+		Serial.print(CLI_PROMPT);
+		input_pos = 0;
+	}
 
-void (*current_ui_handler)(void);
+	while(char c = Serial.read()) {
+		switch(c) {
+		//case '\t':
+		case '\n':
+			parse(input);
+			input_len = -1;
+			break;
+		case '\b':
+			input_del();
+			break;
+		default:
+			input_add(c);
+		}
+	}
+}
 
 #endif

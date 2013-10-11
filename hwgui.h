@@ -27,6 +27,9 @@
 #define __HWGUI_H__
 
 #include <Arduino.h>
+#include "config.h"
+
+#ifdef HWGUI_ENABLE
 
 class UIScreen {
 	static UIScreen *current;
@@ -54,5 +57,7 @@ public:
 #define UI_EVENT_PRESSED_UP     17
 #define UI_EVENT_PRESSED_DOWN   18
 #define UI_EVENT_SELECT         20
+
+#endif
 
 #endif

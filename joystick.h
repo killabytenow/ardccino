@@ -1,7 +1,7 @@
 /*****************************************************************************
- * ardccino.ino
+ * joystick.h
  *
- * Setup and main loop
+ * Joystick handler
  *
  * ---------------------------------------------------------------------------
  * ardccino - Arduino dual PWM/DCC controller
@@ -23,36 +23,32 @@
  *
  *****************************************************************************/
 
-#include <memorysaver.h>
-#include "booster.h"
-#include "dcc.h"
+#ifndef __JOYSTICK_H__
+#define __JOYSTICK_H__
 
-#define __DECLARE_GLOBALS__ 1
 #include "config.h"
 
-void setup()
-{
-  int i;
+#ifdef JOY_ENABLED
 
-#ifdef CLI_ENABLED
-  Serial.begin(CLI_SERIAL_SPEED);
-  Serial.println("Initializing");
+#define JOY_UP     0x01
+#define JOY_DOWN   0x02
+#define JOY_LEFT   0x04
+#define JOY_RIGHT  0x08
+#define JOY_BUTTON 0x10
+
+class Joystick {
+	private:
+		uint8_t joyStatusNow;
+		uint8_t joyStatusOld;
+		
+	public:
+		Joystick(void);
+		void read(void);
+		bool move(uint8_t flag);
+		bool pressed(uint8_t flag);
+		void print();
+};
+
 #endif
 
-// init menu ui
-//ui_curr = (struct ui_screen *) &ui_hello;
-//current_ui_handler = uiHandler;
-//current_ui_handler = cliHandler;
-}
-
-void loop()
-{
-	BoosterMngr::refresh_current();
-#ifdef CLI_ENABLED
-  cli.input_read();
 #endif
-	//current_ui_handler();
-  
-	delay(100);
-}
-

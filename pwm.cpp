@@ -24,10 +24,8 @@
  *****************************************************************************/
 
 #include "pwm.h"
-
-PwmMngr::PwmMngr(Booster *b, int n) : boosters(b), nboosters(n), name("PWM")
-{
-}
+#include "error.h"
+#include "interrupts.h"
 
 void PwmMngr::init(void)
 {
@@ -35,19 +33,17 @@ void PwmMngr::init(void)
 
 	// discover which timers must be configured
 	for(int b = 0; b < nboosters; b++) {
-		for(uint8_t i = 0; i < n; i++) {
-			switch(pwmSignalPin) {
-			case 9:
-			case 10:
-				timers |= (1 << 1)
-				break;
-			case 3:
-			case 11:
-				timers |= (1 << 2)
-				break;
-			default:
-				fatal("Cannot figure how to configure output pin for PWM output");
-			}
+		switch(boosters[b].pwmSignalPin) {
+		case 9:
+		case 10:
+			timers |= (1 << 1);
+			break;
+		case 3:
+		case 11:
+			timers |= (1 << 2);
+			break;
+		default:
+			fatal("Cannot figure how to configure output pin for PWM output");
 		}
 	}
 
@@ -65,7 +61,7 @@ void PwmMngr::init(void)
 		TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
 	}
 
-	if(timers & (1 << 2)) }
+	if(timers & (1 << 2)) {
 		// timer 2
 		TCCR2A = (TCCR2A & 0b00001100)
 		       | 0b00000011;  // Fast PWM (WGM21, WGM20)
@@ -89,10 +85,8 @@ void PwmMngr::init(void)
 
 	//-------------------------------------------
 	// RESET PWM STATUS
-	for(int b = 0; b < nboosters; b++) {
-		memset(pwmOutput[b], 0, sizeof(struct pwmOutput_struct));
-		pwmOutput[i].inertial = true;
-	}
+	for(int b = 0; b < nboosters; b++)
+		boosters[b].reset();
 
 	enable_interrupts();
 }
@@ -112,48 +106,48 @@ void PwmMngr::fini(void)
 
 void PwmMngr::booster_refresh(Booster *b)
 {
-	if(pwmOutput[sp].trgt_speed == pwmOutput[sp].curr_speed)
+	if(b->trgt_power == b->curr_power)
 		return;
 
-	if(pwmOutput[sp].inertial) {
+	if(b->inertial) {
 		// INERTIAL MODE
-		int d, trgt_speed, acc_inc;
+		int d, trgt_power, acc_inc;
 
 		// If target of different sign than current val then brake to zero...
 		// elsewhere go directly to the target speed
-		trgt_speed = b->curr_speed && (b->trgt_speed ^ b->curr_speed) & ((int) 0x8000)
+		trgt_power = b->curr_power && (b->trgt_power ^ b->curr_power) & ((int) 0x8000)
 				? 0
-				: b->trgt_speed;
+				: b->trgt_power;
 
 		// calculate acceleration increment
-		acc_inc = trgt_speed > b->curr_speed
+		acc_inc = trgt_power > b->curr_power
 				?  b->inc_accel
 				: -b->inc_accel;
 		if(abs(b->curr_accel) < b->max_accel)
 			b->curr_accel += acc_inc;
 
 		// calculate final speed
-		if(abs(trgt_speed - b->curr_speed) < abs(b->curr_accel)) {
-			d = (trgt_speed - b->curr_speed) >> 1;
+		if(abs(trgt_power - b->curr_power) < abs(b->curr_accel)) {
+			d = (trgt_power - b->curr_power) >> 1;
 			if(!d)
-				d = trgt_speed - b->curr_speed;
+				d = trgt_power - b->curr_power;
 			b->curr_accel = d;
 		} else {
 			d = b->curr_accel;
 		}
-		b->curr_speed += d;
+		b->curr_power += d;
 
-		if(b->trgt_speed == b->curr_speed)
+		if(b->trgt_power == b->curr_power)
 			b->curr_accel = 0;
 	} else {
 		// DIRECT MODE
-		b->curr_speed = b->trgt_speed;
+		b->curr_power = b->trgt_power;
 		b->curr_accel = 0;
 	}
 
 	// UPDATE BOOSTER OUTPUT
-	digitalWrite(b->dirSignalPin, b->curr_speed > 0);
-	unsigned char pwmvalue = b->min_power + abs(b->curr_speed);
+	digitalWrite(b->dirSignalPin, b->curr_power > 0);
+	unsigned char pwmvalue = b->min_power + abs(b->curr_power);
 	switch(b->pwmSignalPin) {
 	case  3: OCR2B = pwmvalue; break;
 	case  9: OCR1A = pwmvalue; break;
@@ -166,17 +160,17 @@ void PwmMngr::booster_refresh(Booster *b)
 void PwmMngr::refresh(void)
 {
 	for(int b = 0; b < nboosters; b++)
-		pwmRefreshPwmOutput(boosters + b);
+		booster_refresh(boosters + b);
 }
 
 void PwmMngr::accelerate(Booster *b, int v)
 {
-	b->trgt_speed = v > 0
-			? (b->trgt_speed + v < b->max_power
-				? b->trgt_speed + v
+	b->trgt_power = v > 0
+			? (b->trgt_power + v < b->max_power
+				? b->trgt_power + v
 				: b->max_power)
-			: (b->trgt_speed + v > -b->max_power
-				? b->trgt_speed + v
+			: (b->trgt_power + v > -b->max_power
+				? b->trgt_power + v
 				: -b->max_power);
 }
 
@@ -190,11 +184,11 @@ void PwmMngr::accelerate(int b, int v)
 
 void PwmMngr::speed(int b, int s)
 {
-	if(b < 0 || b > BOOSTER_N)
+	if(b < 0 || b > nboosters)
 		fatal("pwmSpeed: pwm booster out of bounds.");
 	if(s < -255 || s > 255)
 		fatal("pwmSpeed: speed out of bounds.");
-	boosters[b]->trgt_speed = s;
+	boosters[b].trgt_power = s;
 }
 
 void PwmMngr::stop(int b)
@@ -207,6 +201,6 @@ void PwmMngr::switch_dir(int b)
   if(b < 0 || b > nboosters)
     fatal("switch_dir: pwm out of bounds.");
     
-  boosters[b]->trgt_speed = 0 - boosters[b]->trgt_speed;
+  boosters[b].trgt_power = 0 - boosters[b].trgt_power;
 }
 
