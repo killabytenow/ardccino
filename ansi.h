@@ -3,12 +3,19 @@
 
 #define ANSI_CSI "\x1B["
 
-// ED – Erase Display
+// ED – Erase Display (cursor does not move)
 //   Clears part of the screen. If n is zero (or missing), clear from cursor to
 //   end of screen. If n is one, clear from cursor to beginning of the screen.
 //   If n is two, clear entire screen (and moves cursor to upper left on DOS
 //   ANSI.SYS).
 #define ANSI_ED(x)	ANSI_CSI #x "J"
+
+// EL  - Erase in Line (cursor does not move)
+//   [K [0K Erase from current position to end (inclusive)
+//   [1K    Erase from beginning to current position
+//   [2K    Erase entire current line
+//   [?0K   Selective erase to end of line ([?1K, [?2K similar)
+#define ANSI_EL(x)	ANSI_CSI #x "K"
 
 // SCP – Save Cursor Position
 // RCP – Restore Cursor Position
@@ -39,7 +46,7 @@
 //   Sets SGR parameters, including text color. After CSI can be zero or more
 //   parameters separated with ;. With no parameters, CSI m is treated as CSI 0
 //   m (reset / normal), which is typical of most of the ANSI escape sequences.
-#define ANSI_SGR(x)		ANSI_CSI #x "M"
+#define ANSI_SGR(x)		ANSI_CSI #x "m"
 
 // SGR COMMANDS
 //   Some macros based on SGR commands
