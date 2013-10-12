@@ -27,7 +27,6 @@
 #include "hwgui.h"
 #include "booster.h"
 #include "booster_mngr.h"
-#include "error.h"
 #include "fonts.h"
 
 #ifdef HWGUI_ENABLE
