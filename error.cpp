@@ -37,7 +37,3 @@ void fatal(char *msg)
   while(1);
 }
 
-void debug(char *format, ...)
-{
-}
-
