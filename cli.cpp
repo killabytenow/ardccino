@@ -71,6 +71,16 @@ void Cli::_msg(char *prefix, char *frmt, va_list args)
 			case 'c':
 				Serial.print((char) va_arg(args, char));
 				break;
+			case 'x':
+				{
+					unsigned int n = va_arg(args, unsigned int), x;
+					int m;
+					for(m = 16 - 4; m >= 0; m -= 4) {
+						x = ((n >> m) & 0x0f);
+						Serial.print((char) (x < 0x0a ? x + '0' : x + 'a'));
+					}
+				}
+				break;
 			default:
 				Serial.print(*p);
 			}
@@ -207,7 +217,6 @@ bool Cli::parse_integer(char *token, int *i)
 {
 	int n;
 	int type;
-	char *t;
 
 	// identify number
 	if(strlen(token) > 2
@@ -215,44 +224,44 @@ bool Cli::parse_integer(char *token, int *i)
 	&& (token[1] == 'x' || token[2] == 'X')) {
 		// c/c++ hex number
 		type = 1;
-		t = token + 2;
+		token += 2;
 	} else
 	if(strlen(token) > 1
 	&& (token[strlen(token)-1] == 'h' || token[strlen(token)-1] == 'H')) {
 		// asm hex number
 		type = 2;
-		t = token;
 	} else {
 		// decimal number
 		type = 0;
-		t = token;
 	}
+
+	debug("%s: type=%d token=%x (%d) i=%x", __func__, type, token, token, i);
 
 	// parse num
 	n = 0;
 	switch(type) {
 	case 0: // decimal number
-		for(; *t; t++) {
-			if(*t < '0' || *t > '9')
+		for(; *token; token++) {
+			if(*token < '0' || *token > '9')
 				return false;
-			n += (n * 10) + *t;
+			n += (n * 10) + *token;
 		}
 		break;
 	case 1: // c/c++ hex number
 	case 2: // asm hex number
-		for(; *t; t++) {
-			if(*t >= '0' && *t <= '9')
-				n = (n << 4) | (*t - '0');
+		for(; *token; token++) {
+			if(*token >= '0' && *token <= '9')
+				n = (n << 4) | (*token - '0');
 			else
-			if(*t >= 'a' && *t <= 'f')
-				n = (n << 4) | (*t - 'a');
+			if(*token >= 'a' && *token <= 'f')
+				n = (n << 4) | (*token - 'a');
 			else
-			if(*t >= 'A' && *t <= 'F')
-				n = (n << 4) | (*t - 'a');
+			if(*token >= 'A' && *token <= 'F')
+				n = (n << 4) | (*token - 'a');
 			else
 			break;
 		}
-		if(type == 2 && (*t == 'h' || *t == 'H') && !t[1])
+		if(type == 2 && (*token == 'h' || *token == 'H') && !token[1])
 			break;
 		return false;
 	default:
@@ -267,20 +276,24 @@ int Cli::parse_token(char *token, int *i)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
 
-	for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
-		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
+debug("%s: parse_token(\"%s\"@%x, %x)", __func__, token, token, i);
+	for(int i = 0; i < sizeof(cli_tokens) / sizeof(char *); i++) {
+		strcpy_P(buffer, (char *) pgm_read_word(&(cli_tokens[i])));
 		if(!strcasecmp(token, buffer))
 			return i;
 	}
 
+debug("%s: identify integer", __func__);
 	if(parse_integer(token, i))
 		return CLI_TOKEN_INTEGER;
 
+debug("%s: caca", __func__);
 	return -1;
 }
 
 int Cli::parse_token(char *token)
 {
+debug("%s: parse_token(\"%s\"@%x)", __func__, token, token);
 	return parse_token(token, NULL);
 }
 
