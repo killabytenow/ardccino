@@ -26,7 +26,6 @@
 #include "config.h"
 #include "interrupts.h"
 //#include "USBAPI.h"
-#include "error.h"
 #include "dcc.h"
 
 #define DCC_CTC_ZERO    232
@@ -70,7 +69,7 @@ DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
 	: service_booster(service_booster), BoosterMngr(b, n)
 {
 	if(service_booster >= 0 && service_booster >= n)
-		fatal("service_booster id is above nboosters.");
+		cli.fatal("service_booster id is above nboosters.");
 }
 
 void DccMngr::isr_operations(void)
@@ -236,14 +235,14 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
 			: ope_buffer_pool;
   
 	if(len < 2 || len >= DCC_MSG_MAX)
-		fatal("Bad message size");
+		cli.fatal("Bad message size");
   
 	// extract address
 	address = msg[0]; // enough for 7-bit address, or broadcast (0x00) or idle packets (0xff)
 	if(address & 0x80 && address != 0xff) {
 		// yep! two-byte address
 		if(len == 2)
-			fatal("Message too short (2 byte address in a 2 byte packet)");
+			cli.fatal("Message too short (2 byte address in a 2 byte packet)");
 		address = address << 8 | msg[1];
 	}
 	//Serial.print("address=");Serial.println(address);

@@ -23,8 +23,8 @@
  *
  *****************************************************************************/
 
+#include "config.h"
 #include "pwm.h"
-#include "error.h"
 #include "interrupts.h"
 
 void PwmMngr::init(void)
@@ -43,7 +43,7 @@ void PwmMngr::init(void)
 			timers |= (1 << 2);
 			break;
 		default:
-			fatal("Cannot figure how to configure output pin for PWM output");
+			cli.fatal("Cannot figure how to configure output pin for PWM output");
 		}
 	}
 
@@ -79,7 +79,7 @@ void PwmMngr::init(void)
 		case 10: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
 		case 11: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
 		case 3:  TCCR2A |= 0b00100000; break; // Clear OC2B on cmp match
-		default: fatal("Cannot configure output pin for PWM output");
+		default: cli.fatal("Cannot configure output pin for PWM output");
 		}
 	}
 
@@ -153,7 +153,7 @@ void PwmMngr::booster_refresh(Booster *b)
 	case  9: OCR1A = pwmvalue; break;
 	case 10: OCR1B = pwmvalue; break;
 	case 11: OCR2A = pwmvalue; break;
-	default: fatal("Cannot write PWM output to pin");
+	default: cli.fatal("Cannot write PWM output to pin");
 	}
 }
 
@@ -177,7 +177,7 @@ void PwmMngr::accelerate(Booster *b, int v)
 void PwmMngr::accelerate(int b, int v)
 {
 	if(b < 0 || b > nboosters)
-		fatal("pwmAccelerate: booster out of bounds.");
+		cli.fatal("pwmAccelerate: booster out of bounds.");
 
 	accelerate(boosters + b, v);
 }
@@ -185,9 +185,9 @@ void PwmMngr::accelerate(int b, int v)
 void PwmMngr::speed(int b, int s)
 {
 	if(b < 0 || b > nboosters)
-		fatal("pwmSpeed: pwm booster out of bounds.");
+		cli.fatal("pwmSpeed: pwm booster out of bounds.");
 	if(s < -255 || s > 255)
-		fatal("pwmSpeed: speed out of bounds.");
+		cli.fatal("pwmSpeed: speed out of bounds.");
 	boosters[b].trgt_power = s;
 }
 
@@ -199,7 +199,7 @@ void PwmMngr::stop(int b)
 void PwmMngr::switch_dir(int b)
 {
   if(b < 0 || b > nboosters)
-    fatal("switch_dir: pwm out of bounds.");
+    cli.fatal("switch_dir: pwm out of bounds.");
     
   boosters[b].trgt_power = 0 - boosters[b].trgt_power;
 }
