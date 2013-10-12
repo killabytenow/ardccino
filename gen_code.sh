@@ -24,6 +24,8 @@
 #
 ###############################################################################
 
+set -e
+
 IFS="
 "
 
@@ -73,27 +75,22 @@ cat<<EOF > "$OUT_H"
 #include <Arduino.h>
 
 EOF
-P=""
 for L in `grep -v '^ *\(#.*\)\?$' clierrs.list | sed 's# \+= \+#\t#'`; do
 	echo "#define `echo "$L" | cut -f1` $N"
-	M="$P`echo "$L" | cut -f2`"
+	M="`echo "$L" | cut -f2`"
 	echo "PROGMEM const char cli_err_$N[] = \"$M\";"
 	M="`echo -n "$M" | wc -c`"
 	if [ "$M" -gt "$MAX_LEN" ]; then
 		MAX_LEN="$M"
 	fi
 	N=$(($N + 1))
-	P="error: "
 done >> "$OUT_H"
 echo "#define CLI_ERRS_MAX_LEN $(($MAX_LEN + 1))" >> "$OUT_H"
 echo "PROGMEM const char * const cli_errs[] = {" >> "$OUT_H"
 for i in `seq 0 $(($N - 1))`; do
 	echo "	cli_err_$i,"
 done >> "$OUT_H"
-cat<<EOF >> "$OUT_H"
-	NULL
-};
-EOF
+echo "};" >> "$OUT_H"
 
 #==============================================================================
 # BUILD .banner_wide.h and .banner.h
@@ -119,7 +116,6 @@ for BANNER in banner_wide banner; do
 	for i in `seq 0 $(($N - 1))`; do
 		echo "	${BANNER}_$i,"
 	done >> "$OUT_H"
-	echo "NULL"  >> "$OUT_H"
 	echo "};"    >> "$OUT_H"
 done
 
