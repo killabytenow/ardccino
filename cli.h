@@ -39,6 +39,7 @@ class Cli {
 		char input[255];
 		int  input_len;
 		int  input_pos;
+		bool input_reading;
 
 		// command actions
 		void about(void);
@@ -54,6 +55,7 @@ class Cli {
 		void input_reset(void);
 
 		// parsing and execution
+		bool parse_integer(char *token, int *i);
 		int parse_token(char *token, int *i);
 		int parse_token(char *token);
 		int execute_booster(char **token, char ntokens);
@@ -64,6 +66,7 @@ class Cli {
 	public:
 		Cli(void);
 		void input_read(void);
+		void fatal(char *frmt, ...);
 		void debug(char *frmt, ...);
 		void info(char *frmt, ...);
 		void error(char *frmt, ...);
