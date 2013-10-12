@@ -37,7 +37,6 @@ Booster::Booster(char   *name,
 	  tmpAlarmPin(tmpAlarmPin),   ocpAlarmPin(ocpAlarmPin),
 	  rstSignalPin(rstSignalPin)
 {
-	Serial.print("Configuring booster ["); Serial.print(name); Serial.println(")");
 	trgt_power   = 0;
 	curr_power   = 0;
 	curr_accel   = 0;
@@ -100,4 +99,3 @@ void Booster::set_max_accel(int a)
 {
 #warning "TODO"
 }
-
