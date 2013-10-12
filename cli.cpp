@@ -47,6 +47,7 @@
 Cli::Cli(void)
 {
 	input_reset();
+	input_reading = true;
 }
 
 void Cli::_msg(char *prefix, char *frmt, va_list args)
@@ -76,9 +77,12 @@ void Cli::_msg(char *prefix, char *frmt, va_list args)
 		} else
 			Serial.print(*p);
 	}
-	Serial.print("\r\n" CLI_PROMPT);
-	if(input_len > 0)
-		Serial.print(input);
+	if(input_reading) {
+		Serial.print("\r\n" CLI_PROMPT);
+		if(input_len > 0)
+			Serial.print(input);
+	} else
+		Serial.println();
 }
 
 void Cli::debug(char *frmt, ...)
@@ -103,6 +107,16 @@ void Cli::error(char *frmt, ...)
 	va_start(args, frmt);
 	_msg("ERROR: ", frmt, args);
 	va_end(args);
+}
+
+void Cli::fatal(char *frmt, ...)
+{
+	va_list args;
+	off.enable();
+	va_start(args, frmt);
+	_msg("FATAL: ", frmt, args);
+	va_end(args);
+	while(1);
 }
 
 void Cli::input_reset(void)
@@ -189,8 +203,80 @@ void Cli::booster_status(Booster *b)
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
+bool Cli::parse_integer(char *token, int *i)
+{
+	int n;
+	int type;
+	char *t;
+
+	// identify number
+	if(strlen(token) > 2
+	&& token[0] == '0'
+	&& (token[1] == 'x' || token[2] == 'X')) {
+		// c/c++ hex number
+		type = 1;
+		t = token + 2;
+	} else
+	if(strlen(token) > 1
+	&& (token[strlen(token)-1] == 'h' || token[strlen(token)-1] == 'H')) {
+		// asm hex number
+		type = 2;
+		t = token;
+	} else {
+		// decimal number
+		type = 0;
+		t = token;
+	}
+
+	// parse num
+	n = 0;
+	switch(type) {
+	case 0: // decimal number
+		for(; *t; t++) {
+			if(*t < '0' || *t > '9')
+				return false;
+			n += (n * 10) + *t;
+		}
+		break;
+	case 1: // c/c++ hex number
+	case 2: // asm hex number
+		for(; *t; t++) {
+			if(*t >= '0' && *t <= '9')
+				n = (n << 4) | (*t - '0');
+			else
+			if(*t >= 'a' && *t <= 'f')
+				n = (n << 4) | (*t - 'a');
+			else
+			if(*t >= 'A' && *t <= 'F')
+				n = (n << 4) | (*t - 'a');
+			else
+			break;
+		}
+		if(type == 2 && (*t == 'h' || *t == 'H') && !t[1])
+			break;
+		return false;
+	default:
+		fatal("unknown number type");
+	}
+
+	if(i) *i = n;
+	return true;
+}
+
 int Cli::parse_token(char *token, int *i)
 {
+	char buffer[CLI_TOKEN_MAX_LEN];
+
+	for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
+		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
+		if(!strcasecmp(token, buffer))
+			return i;
+	}
+
+	if(parse_integer(token, i))
+		return CLI_TOKEN_INTEGER;
+
+	return -1;
 }
 
 int Cli::parse_token(char *token)
@@ -208,6 +294,7 @@ int Cli::execute_booster(char **token, char ntokens)
 
 	// COMMAND: booster list
 	if(t == CLI_TOKEN_LIST) {
+debug("executing booster list");
 		CLI_TOKEN_EXPECTED(2);
 		booster_list();
 		return CLI_ERR_OK;
@@ -408,7 +495,7 @@ void Cli::parse(char *buffer)
 void Cli::input_read(void)
 {
 	if(input_len < 0) {
-		Serial.print(ANSI_EL(2) CLI_PROMPT);
+		Serial.print(CLI_PROMPT);
 		input_len = 0;
 	}
 
@@ -416,8 +503,10 @@ void Cli::input_read(void)
 		switch(char c = Serial.read()) {
 		case 13:
 			Serial.println();
+			input_reading = false;
 			parse(input);
 			input_reset();
+			input_reading = true;
 			break;
 		case 127: // backspace
 			input_del();
