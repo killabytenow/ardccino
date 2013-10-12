@@ -23,11 +23,8 @@
  *
  *****************************************************************************/
 
+#include "config.h"
 #include "booster_mngr.h"
-#include "dcc.h"
-#include "pwm.h"
-#include "off.h"
-#include "error.h"
 
 BoosterMngr *BoosterMngr::current = NULL;
 
@@ -47,5 +44,12 @@ int BoosterMngr::enabled(void)
 void BoosterMngr::refresh_current(void)
 {
 	BoosterMngr::current->refresh();
+}
+
+Booster *BoosterMngr::booster(int booster)
+{
+	if(current->booster < 0 || booster > current->nboosters)
+		cli.fatal("Booster #%d out of bounds", booster);
+	return current->boosters + booster;
 }
 
