@@ -28,6 +28,7 @@
  *****************************************************************************/
 
 #include <Arduino.h>
+
 #include "config.h"
 #include "booster.h"
 #include "dcc.h"
@@ -48,6 +49,62 @@ Cli::Cli(void)
 	input_reset();
 }
 
+void Cli::_msg(char *prefix, char *frmt, va_list args)
+{
+	Serial.print(ANSI_EL(2) "\r");
+	if(prefix)
+		Serial.print(prefix);
+
+	for(char *p = frmt; *p; p++) {
+		if(*p == '%') {
+			switch(*++p) {
+			case '\0':
+				Serial.print('%');
+				break;
+			case 'd':
+				Serial.print((int) va_arg(args, int));
+				break;
+			case 's':
+				Serial.print((char *) va_arg(args, char *));
+				break;
+			case 'c':
+				Serial.print((char) va_arg(args, char));
+				break;
+			default:
+				Serial.print(*p);
+			}
+		} else
+			Serial.print(*p);
+	}
+	Serial.print("\r\n" CLI_PROMPT);
+	if(input_len > 0)
+		Serial.print(input);
+}
+
+void Cli::debug(char *frmt, ...)
+{
+	va_list args;
+	va_start(args, frmt);
+	_msg("#debug: ", frmt, args);
+	va_end(args);
+}
+
+void Cli::info(char *frmt, ...)
+{
+	va_list args;
+	va_start(args, frmt);
+	_msg(NULL, frmt, args);
+	va_end(args);
+}
+
+void Cli::error(char *frmt, ...)
+{
+	va_list args;
+	va_start(args, frmt);
+	_msg("ERROR: ", frmt, args);
+	va_end(args);
+}
+
 void Cli::input_reset(void)
 {
 	*input = '\0';
@@ -58,7 +115,7 @@ void Cli::input_reset(void)
 
 void Cli::input_add(char c)
 {
-	if(input_len + 1 < sizeof(input))
+	if(input_len + 1 >= sizeof(input))
 		return;
 	input[input_len++] = c;
 	input[input_len] = '\0';
@@ -68,7 +125,7 @@ void Cli::input_add(char c)
 
 void Cli::input_del(void)
 {
-	if(input_len > 0)
+	if(input_len <= 0)
 		return;
 	input[--input_len] = '\0';
 	input_pos = 0;
@@ -85,7 +142,7 @@ void Cli::about(void)
 
 	for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
 		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
-		Serial.println(buffer);
+		info(buffer);
 	}
 }
 
@@ -96,23 +153,22 @@ void Cli::booster_list(void)
 
 void Cli::booster_status(Booster *b)
 {
-	Serial.print("Booster ["); Serial.print(b->name); Serial.print("] is ");
-	Serial.println(b->enabled ? "ON" : "OFF");
-	Serial.println("hw-config:");
-	Serial.print("  pwmSignalPin: "); Serial.print(b->pwmSignalPin);
-	Serial.print("  dirSignalPin: "); Serial.println(b->dirSignalPin);
-	Serial.print("  tmpAlarmPin: "); Serial.print(b->tmpAlarmPin);
-	Serial.print("  ocpAlarmPin: "); Serial.println(b->ocpAlarmPin);
-	Serial.print("  rstSignalPin: "); Serial.println(b->rstSignalPin);
-	Serial.print("analog-control:");
-	Serial.print("  trgt_power: "); Serial.println(b->trgt_power);
-	Serial.print("  curr_power: "); Serial.println(b->curr_power);
-	Serial.print("  curr_accel: "); Serial.println(b->curr_accel);
-	Serial.print("  inc_accel:  "); Serial.println(b->inc_accel);
-	Serial.print("  max_accel:  "); Serial.println(b->max_accel);
-	Serial.print("  min_power:  "); Serial.println(b->min_power);
-	Serial.print("  max_power:  "); Serial.println(b->max_power);
-	Serial.print("  mode:       "); Serial.println(b->inertial ? "inertial" : "direct");
+	info("Booster [%s] is %s", b->name, b->enabled ? "ON" : "OFF");
+	info("hw-config:");
+	info("  pwmSignalPin: %d", b->pwmSignalPin);
+	info("  dirSignalPin: %d", b->dirSignalPin);
+	info("  tmpAlarmPin:  %d", b->tmpAlarmPin);
+	info("  ocpAlarmPin:  %d", b->ocpAlarmPin);
+	info("  rstSignalPin: %d", b->rstSignalPin);
+	info("analog-control:");
+	info("  trgt_power: %d", b->trgt_power);
+	info("  curr_power: %d", b->curr_power);
+	info("  curr_accel: %d", b->curr_accel);
+	info("  inc_accel:  %d", b->inc_accel);
+	info("  max_accel:  %d", b->max_accel);
+	info("  min_power:  %d", b->min_power);
+	info("  max_power:  %d", b->max_power);
+	info("  mode:       %s", b->inertial ? "inertial" : "direct");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -343,25 +399,27 @@ void Cli::parse(char *buffer)
 
 	// print error/ok string
 	strcpy_P(err, (char *) pgm_read_word(&(cli_errs[r])));
-	Serial.println(err);
+	if(!r)
+		info("%s", err);
+	else
+		error("%s", err);
 }
 
 void Cli::input_read(void)
 {
 	if(input_len < 0) {
-		Serial.println();
-		Serial.print(CLI_PROMPT);
-		input_pos = 0;
+		Serial.print(ANSI_EL(2) CLI_PROMPT);
+		input_len = 0;
 	}
 
-	while(char c = Serial.read()) {
-		switch(c) {
-		//case '\t':
-		case '\n':
+	while(Serial.available()) {
+		switch(char c = Serial.read()) {
+		case 13:
+			Serial.println();
 			parse(input);
-			input_len = -1;
+			input_reset();
 			break;
-		case '\b':
+		case 127: // backspace
 			input_del();
 			break;
 		default:

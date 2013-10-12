@@ -45,6 +45,9 @@ class Cli {
 		void booster_list(void);
 		void booster_status(Booster *b);
 
+		// output
+		void _msg(char *prefix, char *frmt, va_list args);
+
 		// read input
 		void input_add(char c);
 		void input_del(void);
@@ -61,6 +64,9 @@ class Cli {
 	public:
 		Cli(void);
 		void input_read(void);
+		void debug(char *frmt, ...);
+		void info(char *frmt, ...);
+		void error(char *frmt, ...);
 };
 
 #endif
