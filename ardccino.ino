@@ -30,8 +30,6 @@
 
 void setup(void)
 {
-	int i;
-
 #ifdef CLI_ENABLED
 	Serial.begin(CLI_SERIAL_SPEED);
 	Serial.println("Initializing");
