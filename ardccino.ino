@@ -24,19 +24,17 @@
  *****************************************************************************/
 
 #include <memorysaver.h>
-#include "booster.h"
-#include "dcc.h"
 
 #define __DECLARE_GLOBALS__ 1
 #include "config.h"
 
-void setup()
+void setup(void)
 {
-  int i;
+	int i;
 
 #ifdef CLI_ENABLED
-  Serial.begin(CLI_SERIAL_SPEED);
-  Serial.println("Initializing");
+	Serial.begin(CLI_SERIAL_SPEED);
+	Serial.println("Initializing");
 #endif
 
 // init menu ui
@@ -45,13 +43,15 @@ void setup()
 //current_ui_handler = cliHandler;
 }
 
-void loop()
+void loop(void)
 {
+#if 0
 	BoosterMngr::refresh_current();
-#ifdef CLI_ENABLED
-  cli.input_read();
-#endif
 	//current_ui_handler();
+#endif
+#ifdef CLI_ENABLED
+	cli.input_read();
+#endif
   
 	delay(100);
 }
