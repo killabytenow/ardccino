@@ -29,11 +29,12 @@
 #include <Arduino.h>
 #include <UTFT.h>
 
+#include "ansi.h"
+
 #include "booster.h"
 #include "off.h"
 #include "pwm.h"
 #include "dcc.h"
-#include "ansi.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // CONFIGURE BOOSTERS
