@@ -69,15 +69,15 @@ void Cli::_msg(char *prefix, char *frmt, va_list args)
 				Serial.print((char *) va_arg(args, char *));
 				break;
 			case 'c':
-				Serial.print((char) va_arg(args, char));
+				Serial.print((char) va_arg(args, int));
 				break;
 			case 'x':
 				{
 					unsigned int n = va_arg(args, unsigned int), x;
 					int m;
 					for(m = 16 - 4; m >= 0; m -= 4) {
-						x = ((n >> m) & 0x0f);
-						Serial.print((char) (x < 0x0a ? x + '0' : x + 'a'));
+						x = ((unsigned) (n >> m) & (unsigned) 0x000f);
+						Serial.print((char) (x < 0x0a ? x + '0' : x + 'a' - 10));
 					}
 				}
 				break;
@@ -172,7 +172,18 @@ void Cli::about(void)
 
 void Cli::booster_list(void)
 {
-#warning "TODO"
+	Booster *b;
+	info("#"
+		ANSI_SGR_BOLD "id" ANSI_SGR_BOLD_OFF "\t"
+		ANSI_SGR_BOLD "enabled" ANSI_SGR_BOLD_OFF "\t"
+		ANSI_SGR_BOLD "name" ANSI_SGR_BOLD_OFF);
+	for(int bi = 0; bi < BoosterMngr::nboosters(); bi++) {
+		b = BoosterMngr::booster(bi);
+		info("%d\t%s\t%s",
+			bi,
+			b->enabled ? "yes" : "no",
+			b->name);
+	}
 }
 
 void Cli::booster_status(Booster *b)
@@ -213,7 +224,7 @@ void Cli::booster_status(Booster *b)
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
-bool Cli::parse_integer(char *token, int *i)
+bool Cli::parse_integer(char *token, int *v)
 {
 	int n;
 	int type;
@@ -226,25 +237,20 @@ bool Cli::parse_integer(char *token, int *i)
 		type = 1;
 		token += 2;
 	} else
-	if(strlen(token) > 1
-	&& (token[strlen(token)-1] == 'h' || token[strlen(token)-1] == 'H')) {
-		// asm hex number
-		type = 2;
-	} else {
-		// decimal number
-		type = 0;
-	}
-
-	debug("%s: type=%d token=%x (%d) i=%x", __func__, type, token, token, i);
+	type = (strlen(token) > 1
+		&& (token[strlen(token)-1] == 'h' || token[strlen(token)-1] == 'H'))
+		? 2	// asm hex number
+		: 0;	// decimal number
 
 	// parse num
 	n = 0;
 	switch(type) {
 	case 0: // decimal number
 		for(; *token; token++) {
-			if(*token < '0' || *token > '9')
+			if(*token < '0' || *token > '9') {
 				return false;
-			n += (n * 10) + *token;
+			}
+			n = (n * 10) + (*token - '0');
 		}
 		break;
 	case 1: // c/c++ hex number
@@ -254,46 +260,40 @@ bool Cli::parse_integer(char *token, int *i)
 				n = (n << 4) | (*token - '0');
 			else
 			if(*token >= 'a' && *token <= 'f')
-				n = (n << 4) | (*token - 'a');
+				n = (n << 4) | (*token - 'a' + 10);
 			else
 			if(*token >= 'A' && *token <= 'F')
-				n = (n << 4) | (*token - 'a');
+				n = (n << 4) | (*token - 'A' + 10);
 			else
 			break;
 		}
-		if(type == 2 && (*token == 'h' || *token == 'H') && !token[1])
-			break;
-		return false;
+		if((type != 2 && *token)
+		|| (type == 2 && (*token != 'h' && *token != 'H')))
+			return false;
+		break;
 	default:
 		fatal("unknown number type");
 	}
-
-	if(i) *i = n;
+	if(v) *v = n;
 	return true;
 }
 
-int Cli::parse_token(char *token, int *i)
+int Cli::parse_token(char *token, int *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
-
-debug("%s: parse_token(\"%s\"@%x, %x)", __func__, token, token, i);
 	for(int i = 0; i < sizeof(cli_tokens) / sizeof(char *); i++) {
 		strcpy_P(buffer, (char *) pgm_read_word(&(cli_tokens[i])));
 		if(!strcasecmp(token, buffer))
 			return i;
 	}
-
-debug("%s: identify integer", __func__);
-	if(parse_integer(token, i))
+	if(parse_integer(token, v))
 		return CLI_TOKEN_INTEGER;
 
-debug("%s: caca", __func__);
 	return -1;
 }
 
 int Cli::parse_token(char *token)
 {
-debug("%s: parse_token(\"%s\"@%x)", __func__, token, token);
 	return parse_token(token, NULL);
 }
 
@@ -307,7 +307,6 @@ int Cli::execute_booster(char **token, char ntokens)
 
 	// COMMAND: booster list
 	if(t == CLI_TOKEN_LIST) {
-debug("executing booster list");
 		CLI_TOKEN_EXPECTED(2);
 		booster_list();
 		return CLI_ERR_OK;

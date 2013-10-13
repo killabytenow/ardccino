@@ -28,6 +28,14 @@
 
 BoosterMngr *BoosterMngr::current = NULL;
 
+BoosterMngr::BoosterMngr(Booster *b, uint8_t n)
+	: _boosters(b), _nboosters(n)
+{
+	if(!BoosterMngr::current)
+		BoosterMngr::current = this;
+	BoosterMngr::current->init();
+}
+
 BoosterMngr *BoosterMngr::enable(void)
 {
 	if(BoosterMngr::current)
@@ -46,10 +54,15 @@ void BoosterMngr::refresh_current(void)
 	BoosterMngr::current->refresh();
 }
 
-Booster *BoosterMngr::booster(int booster)
+Booster *BoosterMngr::booster(uint8_t booster)
 {
-	if(current->booster < 0 || booster > current->nboosters)
+	if(current->booster < 0 || booster > current->_nboosters)
 		cli.fatal("Booster #%d out of bounds", booster);
-	return current->boosters + booster;
+	return current->_boosters + booster;
+}
+
+uint8_t BoosterMngr::nboosters(void)
+{
+	return current->_boosters ? current->_nboosters : 0;
 }
 

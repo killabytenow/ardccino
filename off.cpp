@@ -26,11 +26,15 @@
 #include <Arduino.h>
 #include "off.h"
 
+OffMngr::OffMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
+{
+}
+
 void OffMngr::init(void)
 {
-	for(int b = 0; b < nboosters; b++) {
-		digitalWrite(boosters[b].pwmSignalPin, LOW);
-		digitalWrite(boosters[b].dirSignalPin, LOW);
+	for(int b = 0; b < _nboosters; b++) {
+		digitalWrite(_boosters[b].pwmSignalPin, LOW);
+		digitalWrite(_boosters[b].dirSignalPin, LOW);
 	  }
 }
 

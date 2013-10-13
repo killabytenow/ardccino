@@ -54,7 +54,7 @@ Booster boosters[] = {
 	Booster("booster#3", 10, 11,  12, 13, 14),
 //	Booster("service",   xx, xx,  xx, xx, xx),
 };
-#define BOOSTERS_N (sizeof(boosters) / sizeof(Booster *))
+#define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
 #else
 extern Booster boosters;
 #endif

@@ -52,6 +52,7 @@ public:
 	struct dcc_buffer_struct ope_buffer_pool[DCC_BUFFER_POOL_SIZE];
 	struct dcc_buffer_struct srv_buffer_pool[DCC_BUFFER_POOL_SIZE];
 
+	DccMngr(Booster *b, uint8_t n);
 	DccMngr(Booster *b, uint8_t n, int8_t service);
 	void init(void);
 	void fini(void);

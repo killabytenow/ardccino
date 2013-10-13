@@ -33,10 +33,10 @@ private:
 	static BoosterMngr *current;
 
 public:
-	Booster *boosters;
-	uint8_t  nboosters;
+	Booster *_boosters;
+	uint8_t  _nboosters;
 
-	BoosterMngr(Booster *b, int n) : boosters(b), nboosters(n) { };
+	BoosterMngr(Booster *b, uint8_t n);
 	static void refresh_current(void);
 
 	virtual void init(void) = 0;
@@ -46,7 +46,8 @@ public:
 	BoosterMngr *enable(void);
 	int enabled(void);
 
-	static Booster *booster(int booster);
+	static Booster *booster(uint8_t booster);
+	static uint8_t nboosters(void);
 };
 
 #endif

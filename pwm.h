@@ -35,7 +35,7 @@ private:
 	void accelerate(Booster *b, int v);
 
 public:
-	PwmMngr(Booster *b, int n) : BoosterMngr(b, n) { };
+	PwmMngr(Booster *b, uint8_t n);
 	void init(void);
 	void fini(void);
 	void refresh(void);

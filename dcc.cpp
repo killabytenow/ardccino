@@ -65,11 +65,17 @@ ISR(TIMER1_COMPB_vect)
 		dcc_excesive_lat = lat;
 }
 
+DccMngr::DccMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
+{
+	service_booster = -1;
+}
+
 DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
 	: service_booster(service_booster), BoosterMngr(b, n)
 {
-	if(service_booster >= 0 && service_booster >= n)
+	if(service_booster >= n)
 		cli.fatal("service_booster id is above nboosters.");
+	init();
 }
 
 void DccMngr::isr_operations(void)
@@ -90,8 +96,8 @@ void DccMngr::isr(struct dcc_buffer_struct *pool)
 	struct dcc_buffer_struct *cmsg;
 
 	/* invert signal */
-	for(int i = 0; i < nboosters; i++)
-		digitalWrite(boosters[i].pwmSignalPin, boosters[i].enabled);
+	for(int i = 0; i < _nboosters; i++)
+		digitalWrite(_boosters[i].pwmSignalPin, _boosters[i].enabled);
 	if((dccZero = !dccZero))
 		return;
 
@@ -165,8 +171,8 @@ void DccMngr::init(void)
 	TIMSK2 &= 0b11111000;
 
 	// SET PWM OUTPUTS TO 1
-	for(int b = 0; b < nboosters; b++)
-		digitalWrite(boosters[b].pwmSignalPin, boosters[b].enabled);
+	for(int b = 0; b < _nboosters; b++)
+		digitalWrite(_boosters[b].pwmSignalPin, _boosters[b].enabled);
 
 	//-------------------------------------------
 	// RESET DCC STATUS
