@@ -47,7 +47,17 @@
 Cli::Cli(void)
 {
 	input_reset();
-	input_reading = true;
+	input_reading = false;
+}
+
+void Cli::init(void)
+{
+	Serial.begin(CLI_SERIAL_SPEED);
+	Serial.println("Initializing");
+	
+	// enable "Set cursor key to application" DECCKM mode
+	//   This mode forbids user to move cursor freely along the screen :D
+	Serial.print(ANSI_CSI "?1h");
 }
 
 void Cli::_msg(char *prefix, char *frmt, va_list args)
@@ -348,8 +358,9 @@ int Cli::execute_booster(char **token, char ntokens)
 			return CLI_ERR_BAD_SYNTAX;
 		}
 		break;
-	// COMMAND: booster <n> status
+	// COMMAND: booster <n> (status|info)
 	case CLI_TOKEN_STATUS:
+	case CLI_TOKEN_INFO:
 		CLI_TOKEN_EXPECTED(3);
 		booster_status(BoosterMngr::booster(booster));
 		break;
@@ -508,21 +519,41 @@ void Cli::parse(char *buffer)
 void Cli::input_read(void)
 {
 	if(input_len < 0) {
+		input_reading = true;
 		Serial.print(CLI_PROMPT);
 		input_len = 0;
 	}
 
 	while(Serial.available()) {
-		switch(char c = Serial.read()) {
+		char c = Serial.read();
+ojete:
+		switch(c) {
 		case 13:
 			Serial.println();
 			input_reading = false;
 			parse(input);
 			input_reset();
-			input_reading = true;
 			break;
 		case 127: // backspace
 			input_del();
+			break;
+		case 27:
+			c = Serial.read();
+			if(c != 79)
+				goto ojete;
+			c = Serial.read();
+			switch(c) {
+			case 65: // UP
+				break;
+			case 66: // DOWN
+				break;
+			case 68: // LEFT;
+				break;
+			case 67: // RIGHT
+				break;
+			default:
+				goto ojete;
+			}
 			break;
 		default:
 			input_add(c);

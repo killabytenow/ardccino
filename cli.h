@@ -65,6 +65,7 @@ class Cli {
 
 	public:
 		Cli(void);
+		void init(void);
 		void input_read(void);
 		void fatal(char *frmt, ...);
 		void debug(char *frmt, ...);
