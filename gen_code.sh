@@ -63,7 +63,6 @@ for i in `seq 0 $(($N - 1))`; do
 	echo "	cli_token_$i,"
 done >> "$OUT_H"
 cat<<EOF >> "$OUT_H"
-	NULL
 };
 
 #define CLI_TOKEN_MAX_LEN $(($MAX_LEN + 1))
