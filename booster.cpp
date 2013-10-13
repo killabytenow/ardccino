@@ -99,3 +99,14 @@ void Booster::set_max_accel(int a)
 {
 #warning "TODO"
 }
+
+void Booster::set_mode_inertial(void)
+{
+	inertial = true;
+}
+
+void Booster::set_mode_direct(void)
+{
+	inertial = false;
+}
+

@@ -212,15 +212,15 @@ void Cli::booster_status(Booster *b)
 
 #define CLI_TOKEN_AT_LEAST(x)                                    \
 		{                                                \
-			if((x) < ntokens)                        \
+			if(ntokens < (x))                        \
 				return CLI_ERR_NEED_MORE_PARAMS; \
 		}
 #define CLI_TOKEN_EXPECTED(x)                                    \
 		{                                                \
 			int8_t __x = (x);                        \
-			if(__x < ntokens)                        \
+			if(ntokens < __x)                        \
 				return CLI_ERR_NEED_MORE_PARAMS; \
-			if(__x > ntokens)                        \
+			if(ntokens > __x)                        \
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
@@ -487,6 +487,7 @@ void Cli::parse(char *buffer)
 		*p++ = '\0';
 	}
 
+//debug("ntokens = %d", ntokens); for(int i = 0; i < ntokens; i++) debug("token[%d] = '%s'", i, token[i]);
 	// [ALL] ---
 	if(!ntokens)
 		return;
