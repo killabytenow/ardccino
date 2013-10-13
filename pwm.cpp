@@ -35,6 +35,8 @@ void PwmMngr::init(void)
 {
 	uint8_t timers;
 
+	cli.debug("Initializing PWM.");
+
 	// discover which timers must be configured
 	for(int b = 0; b < _nboosters; b++) {
 		switch(_boosters[b].pwmSignalPin) {
