@@ -1,6 +1,7 @@
 #ifndef __ANSI_H__
 #define __ANSI_H__
 
+#define ANSI_ESC "\x1B"
 #define ANSI_CSI "\x1B["
 
 // ED – Erase Display (cursor does not move)
