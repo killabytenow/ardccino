@@ -23,7 +23,7 @@
  *
  *****************************************************************************/
 
-#include "Arduino.h"
+#include "config.h"
 #include "booster.h"
 
 Booster::Booster(char   *name,
@@ -82,22 +82,34 @@ void Booster::off(void)
 
 void Booster::set_inc_accel(int a)
 {
-#warning "TODO"
+	if(a <= 0 || a > 64)
+		cli.fatal("Bad acceleration increment (%d)", a);
+	inc_accel = a;
 }
 
-void Booster::set_min_power(int a)
+void Booster::set_min_power(int p)
 {
-#warning "TODO"
+	if(p < 0 || p > 255)
+		cli.fatal("Bad min_power (%d)", p);
+	if(p <= max_power)
+		cli.fatal("Proposed min_power (%d) smaller or equal to max_power (%d)", p, max_power);
+	min_power = p;
 }
 
-void Booster::set_max_power(int a)
+void Booster::set_max_power(int p)
 {
-#warning "TODO"
+	if(p < 0 || p > 255)
+		cli.fatal("Bad max_power (%d)", p);
+	if(p <= min_power)
+		cli.fatal("Proposed max_power (%d) smaller or equal to min_power (%d)", p, max_power);
+	max_power = p;
 }
 
 void Booster::set_max_accel(int a)
 {
-#warning "TODO"
+	if(a < 0 || a > 255)
+		cli.fatal("Bad max_accel (%d)", a);
+	max_accel = a;
 }
 
 void Booster::set_mode_inertial(void)
