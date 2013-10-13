@@ -31,9 +31,6 @@ BoosterMngr *BoosterMngr::current = NULL;
 BoosterMngr::BoosterMngr(Booster *b, uint8_t n)
 	: _boosters(b), _nboosters(n)
 {
-	if(!BoosterMngr::current)
-		BoosterMngr::current = this;
-	BoosterMngr::current->init();
 }
 
 BoosterMngr *BoosterMngr::enable(void)
