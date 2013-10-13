@@ -30,10 +30,8 @@
 
 void setup(void)
 {
-#ifdef CLI_ENABLED
-	Serial.begin(CLI_SERIAL_SPEED);
-	Serial.println("Initializing");
-#endif
+	cli.init();
+	off.enable();
 
 // init menu ui
 //ui_curr = (struct ui_screen *) &ui_hello;
@@ -43,10 +41,7 @@ void setup(void)
 
 void loop(void)
 {
-#if 0
 	BoosterMngr::refresh_current();
-	//current_ui_handler();
-#endif
 #ifdef CLI_ENABLED
 	cli.input_read();
 #endif
