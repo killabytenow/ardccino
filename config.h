@@ -49,10 +49,12 @@
 
 #ifdef __DECLARE_GLOBALS__
 Booster boosters[] = {
-	Booster("booster#1",  3,  2,   4,  5, 14),
-	Booster("booster#2",  9,  6,   7,  8, 14),
-	Booster("booster#3", 10, 11,  12, 13, 14),
-//	Booster("service",   xx, xx,  xx, xx, xx),
+//	        name         pwm  dir  tmp  ocp  rst
+//	        ------------ ---  ---  ---  ---  --- 
+	Booster("booster#1",   3,   2,   4,   5,  14),
+	Booster("booster#2",   9,   6,   7,   8,  14),
+	Booster("booster#3",  10,  11,  12,  13,  14),
+//	Booster("service",    xx,  xx,  xx,  xx,  xx),
 };
 #define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
 #else
