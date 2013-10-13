@@ -75,7 +75,6 @@ DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
 {
 	if(service_booster >= n)
 		cli.fatal("service_booster id is above nboosters.");
-	init();
 }
 
 void DccMngr::isr_operations(void)
@@ -148,6 +147,8 @@ void DccMngr::isr(struct dcc_buffer_struct *pool)
 void DccMngr::init(void)
 {
 	unsigned char sreg;
+
+	cli.debug("Initializing DCC.");
 
 	disable_interrupts();
 
