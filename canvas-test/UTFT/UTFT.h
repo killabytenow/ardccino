@@ -38,6 +38,11 @@
 #ifndef UTFT_h
 #define UTFT_h
 
+#ifdef UTFT_GTK_SIMULATION
+#include <gtk/gtk.h>
+#include "ardtypes.h"
+#endif
+
 #define UTFT_VERSION	260
 
 #define LEFT 0
@@ -189,7 +194,7 @@ class UTFT
 		void setBackColor(uint32_t color);
 		word getBackColor();
 		void print(char *st, int x, int y, int deg=0);
-		void print(String st, int x, int y, int deg=0);
+		//void print(String st, int x, int y, int deg=0);
 		void printNumI(long num, int x, int y, int length=0, char filler=' ');
 		void printNumF(double num, byte dec, int x, int y, char divider='.', int length=0, char filler=' ');
 		void setFont(uint8_t* font);

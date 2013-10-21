@@ -36,10 +36,14 @@
 */
 
 #include "UTFT.h"
+#ifndef UTFT_GTK_SIMULATION
 #include <pins_arduino.h>
+#endif
 
 // Include hardware-specific functions for the correct MCU
-#if defined(__AVR__)
+#if defined(UTFT_GTK_SIMULATION)
+	#include "hardware/gtk/gtk.h"
+#elif defined(__AVR__)
 	#include <avr/pgmspace.h>
 	#include "hardware/avr/HW_AVR.h"
 	#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
@@ -230,6 +234,7 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 	}
 	display_model=model;
 
+#ifndef UTFT_GTK_SIMULATION
 	if (display_transfer_mode!=1)
 	{
 		_set_direction_registers(display_transfer_mode);
@@ -276,10 +281,12 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 		pinMode(CS,OUTPUT);
 		pinMode(RST,OUTPUT);
 	}
+#endif
 }
 
 void UTFT::LCD_Write_COM(char VL)  
 {   
+#ifndef UTFT_GTK_SIMULATION
 	if (display_transfer_mode!=1)
 	{
 		cbi(P_RS, B_RS);
@@ -287,10 +294,14 @@ void UTFT::LCD_Write_COM(char VL)
 	}
 	else
 		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
+#else
+#warning "UTFT::LCD_Write_COM()"
+#endif
 }
 
 void UTFT::LCD_Write_DATA(char VH,char VL)
 {
+#ifndef UTFT_GTK_SIMULATION
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -301,10 +312,21 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 		LCD_Writ_Bus(0x01,VH,display_transfer_mode);
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
 	}
+#else
+	if (display_transfer_mode!=1)
+	{
+#warning "Parallel transfer."
+	}
+	else
+	{
+#warning "Serial transfer."
+	}
+#endif
 }
 
 void UTFT::LCD_Write_DATA(char VL)
 {
+#ifndef UTFT_GTK_SIMULATION
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -312,6 +334,16 @@ void UTFT::LCD_Write_DATA(char VL)
 	}
 	else
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
+#else
+	if (display_transfer_mode!=1)
+	{
+#warning "Parallel transfer."
+	}
+	else
+	{
+#warning "Serial transfer."
+	}
+#endif
 }
 
 void UTFT::LCD_Write_COM_DATA(char com1,int dat1)
@@ -323,8 +355,10 @@ void UTFT::LCD_Write_COM_DATA(char com1,int dat1)
 void UTFT::InitLCD(byte orientation)
 {
 	orient=orientation;
+
 	_hw_special_init();
 
+#ifndef UTFT_GTK_SIMULATION
 	sbi(P_RST, B_RST);
 	delay(5); 
 	cbi(P_RST, B_RST);
@@ -405,6 +439,7 @@ void UTFT::InitLCD(byte orientation)
 	}
 
 	sbi (P_CS, B_CS); 
+#endif
 
 	setColor(255, 255, 255);
 	setBackColor(0, 0, 0);
@@ -1083,6 +1118,7 @@ void UTFT::print(char *st, int x, int y, int deg)
 			rotateChar(*st++, x, y, i, deg);
 }
 
+#ifndef UTFT_GTK_SIMULATION
 void UTFT::print(String st, int x, int y, int deg)
 {
 	char buf[st.length()+1];
@@ -1090,6 +1126,7 @@ void UTFT::print(String st, int x, int y, int deg)
 	st.toCharArray(buf, st.length()+1);
 	print(buf, x, y, deg);
 }
+#endif
 
 void UTFT::printNumI(long num, int x, int y, int length, char filler)
 {
@@ -1331,6 +1368,11 @@ void UTFT::lcdOff()
 	case PCF8833:
 		LCD_Write_COM(0x28);
 		break;
+#ifdef UTFT_GTK_SIMULATION
+	default:
+		g_print("lcdOff() : Display model %d not supported.\n",
+			display_model);
+#endif
 	}
 	sbi(P_CS, B_CS);
 }
@@ -1343,6 +1385,11 @@ void UTFT::lcdOn()
 	case PCF8833:
 		LCD_Write_COM(0x29);
 		break;
+#ifdef UTFT_GTK_SIMULATION
+	default:
+		g_print("lcdOn() : Display model %d not supported.\n",
+			display_model);
+#endif
 	}
 	sbi(P_CS, B_CS);
 }
@@ -1357,6 +1404,11 @@ void UTFT::setContrast(char c)
 		LCD_Write_COM(0x25);
 		LCD_Write_DATA(c);
 		break;
+#ifdef UTFT_GTK_SIMULATION
+	default:
+		g_print("setContrast() : Display model %d not supported.\n",
+			display_model);
+#endif
 	}
 	sbi(P_CS, B_CS);
 }
