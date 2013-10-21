@@ -1,6 +1,5 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
-#include "ardtypes.h"
 #include "UTFT/UTFT.h"
 
 /* Surface to store current scribbles */
