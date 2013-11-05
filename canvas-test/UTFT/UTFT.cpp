@@ -295,7 +295,8 @@ void UTFT::LCD_Write_COM(char VL)
 	else
 		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
 #else
-#warning "UTFT::LCD_Write_COM()"
+	g_print("LCD_Write_COM() executed. Aborting.");
+	abort();
 #endif
 }
 
@@ -313,14 +314,8 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
 	}
 #else
-	if (display_transfer_mode!=1)
-	{
-#warning "Parallel transfer."
-	}
-	else
-	{
-#warning "Serial transfer."
-	}
+	g_print("LCD_Write_DATA() executed. Aborting.");
+	abort();
 #endif
 }
 
@@ -335,14 +330,8 @@ void UTFT::LCD_Write_DATA(char VL)
 	else
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
 #else
-	if (display_transfer_mode!=1)
-	{
-#warning "Parallel transfer."
-	}
-	else
-	{
-#warning "Serial transfer."
-	}
+	g_print("LCD_Write_DATA() executed. Aborting.");
+	abort();
 #endif
 }
 
@@ -1362,40 +1351,39 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int deg
 
 void UTFT::lcdOff()
 {
+#ifndef UTFT_GTK_SIMULATION
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{
 	case PCF8833:
 		LCD_Write_COM(0x28);
 		break;
-#ifdef UTFT_GTK_SIMULATION
-	default:
-		g_print("lcdOff() : Display model %d not supported.\n",
-			display_model);
-#endif
 	}
 	sbi(P_CS, B_CS);
+#else
+// TODO: Switch off
+#endif
 }
 
 void UTFT::lcdOn()
 {
+#ifndef UTFT_GTK_SIMULATION
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{
 	case PCF8833:
 		LCD_Write_COM(0x29);
 		break;
-#ifdef UTFT_GTK_SIMULATION
-	default:
-		g_print("lcdOn() : Display model %d not supported.\n",
-			display_model);
-#endif
 	}
 	sbi(P_CS, B_CS);
+#else
+// TODO: Switch on
+#endif
 }
 
 void UTFT::setContrast(char c)
 {
+#ifndef UTFT_GTK_SIMULATION
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{
@@ -1404,13 +1392,11 @@ void UTFT::setContrast(char c)
 		LCD_Write_COM(0x25);
 		LCD_Write_DATA(c);
 		break;
-#ifdef UTFT_GTK_SIMULATION
-	default:
-		g_print("setContrast() : Display model %d not supported.\n",
-			display_model);
-#endif
 	}
 	sbi(P_CS, B_CS);
+#else
+// TODO: set contrast
+#endif
 }
 
 int UTFT::getDisplayXSize()

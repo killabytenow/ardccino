@@ -243,6 +243,19 @@ class UTFT
 		void _fast_fill_16(int ch, int cl, long pix);
 		void _fast_fill_8(int ch, long pix);
 		void _convert_float(char *buf, double num, int width, byte prec);
+
+#ifdef UTFT_GTK_SIMULATION
+		int gtk_last_x, gtk_last_y;
+		int gtk_color;
+		int zoom;
+		cairo_surface_t *surface;
+		GtkWidget *fixed;
+		GtkWidget *drawing_area;
+
+		GtkWidget *gtk_getLCDWidget(void);
+		void gtk_clear_surface(void);
+		void __set_pixel(void);
+#endif
 };
 
 #endif

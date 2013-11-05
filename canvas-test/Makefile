@@ -6,6 +6,8 @@ all: $(TARGET)
 
 canvas-test.o: canvas-test.cpp
 
+UTFT/UTFT.o : UTFT/UTFT.cpp UTFT/UTFT.h UTFT/hardware/gtk/gtk.h
+
 $(TARGET) : $(OBJS)
 
 %.o: %.cpp
