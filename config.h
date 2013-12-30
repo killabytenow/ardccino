@@ -145,7 +145,7 @@ extern Cli cli;
 #define TFT_DC        48
 #define TFT_RESET     50
 #define TFT_CS        52
-UTFT tft(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
+UTFT tft = UTFT(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
 
 #else
 extern UTFT tft;

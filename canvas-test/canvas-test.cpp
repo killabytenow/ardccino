@@ -84,7 +84,8 @@ int main(int argc, char *argv[])
 	gtk_container_set_border_width(GTK_CONTAINER(window), 8);
 
 g_print("PEROLAIRE\n");
-	UTFT utft = UTFT();
+	UTFT utft = UTFT(TFT01_22SP, 0, 0, 0, 0, 0);
+	utft.InitLCD(LANDSCAPE);
 	GtkWidget *utft_widget = utft.gtk_getLCDWidget();
 	gtk_container_add(GTK_CONTAINER(window), utft_widget);
 g_print("PEROLAS\n");

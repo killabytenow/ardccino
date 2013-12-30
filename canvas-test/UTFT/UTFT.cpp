@@ -84,6 +84,9 @@
 
 UTFT::UTFT()
 {
+#ifdef UTFT_GTK_SIMULATION
+	fixed = NULL;
+#endif
 }
 
 UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
@@ -281,6 +284,8 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 		pinMode(CS,OUTPUT);
 		pinMode(RST,OUTPUT);
 	}
+#else
+	fixed = NULL;
 #endif
 }
 
