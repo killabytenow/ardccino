@@ -62,7 +62,7 @@ void UTFT::__set_pixel(void)
 	double r = ((double) ((((unsigned) gtk_color) >> 8) & 0xff)) / 247.0;
 	double g = ((double) ((((unsigned) gtk_color) >> 3) & 0xff)) / 251.0;
 	double b = ((double) ((((unsigned) gtk_color) << 3) & 0xff)) / 247.0;
-	g_print("Using color (%.2f, %.2f, %.2f)", r, g, b);
+	g_print("Using color (%.2f, %.2f, %.2f)\n", r, g, b);
 	cairo_set_source_rgb(cr, r , g, b);
 	cairo_fill(cr);
 
@@ -80,7 +80,6 @@ void UTFT::__set_pixel(void)
  * The ::button-press signal handler receives a GdkEventButton
  * struct which contains this information.
  */
-#if 0
 static gboolean button_press_event_cb(
 		GtkWidget      *widget,
 		GdkEventButton *event,
@@ -112,11 +111,12 @@ static gboolean motion_notify_event_cb(
 				GdkEventMotion *event,
 				gpointer        data)
 {
+	UTFT *utft = (UTFT *) data;
 	int x, y;
 	GdkModifierType state;
 
 	/* paranoia check, in case we haven't gotten a configure event */
-	if(surface == NULL)
+	if(utft->surface == NULL)
 		return FALSE;
 
 	/* This call is very important; it requests the next motion event.
@@ -130,6 +130,8 @@ static gboolean motion_notify_event_cb(
 	* can cope.
 	*/
 	gdk_window_get_pointer(event->window, &x, &y, &state);
+	utft->gtk_last_x = x / utft->zoom;
+	utft->gtk_last_y = y / utft->zoom;
 
 	if(state & GDK_BUTTON1_MASK)
 		utft->__set_pixel();
@@ -137,7 +139,6 @@ static gboolean motion_notify_event_cb(
 	/* We've handled it, stop processing */
 	return TRUE;
 }
-#endif
 
 void UTFT::_hw_special_init()
 {
@@ -171,12 +172,10 @@ void UTFT::_hw_special_init()
 				G_CALLBACK(configure_event_cb), this);
 
 	/* Event signals */
-#if 0
 	g_signal_connect(drawing_area, "motion-notify-event",
 				G_CALLBACK(motion_notify_event_cb), this);
 	g_signal_connect(drawing_area, "button-press-event",
 				G_CALLBACK(button_press_event_cb), this);
-#endif
 
 	/* Ask to receive events the drawing area doesn't normally
 	 * subscribe to. In particular, we need to ask for the

@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 
 	// build the UTFT widget (screen)
 	UTFT utft = UTFT(TFT01_22SP, 0, 0, 0, 0, 0);
+	utft.zoom = zoom;
 	utft.InitLCD(LANDSCAPE);
 
 	// create window and attach UTFT screen
