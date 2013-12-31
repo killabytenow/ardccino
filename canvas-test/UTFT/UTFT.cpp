@@ -86,6 +86,7 @@ UTFT::UTFT()
 {
 #ifdef UTFT_GTK_SIMULATION
 	fixed = NULL;
+	zoom = 1;
 #endif
 }
 
@@ -286,6 +287,7 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 	}
 #else
 	fixed = NULL;
+	zoom = 1;
 #endif
 }
 

@@ -141,6 +141,14 @@ static gboolean motion_notify_event_cb(
 
 void UTFT::_hw_special_init()
 {
+	int w, h;
+
+	w = (disp_x_size + 1) * zoom;
+	h = (disp_y_size + 1) * zoom;
+	if(orient == LANDSCAPE)
+		swap(int, w, h);
+	g_print("draw surface size %dx%d (zoom factor %d)\n", w, h, zoom);
+
 	// initialize GTK LCD state attributes
 	gtk_last_x = gtk_last_y = 0;
 	gtk_color = 0;
@@ -153,8 +161,7 @@ void UTFT::_hw_special_init()
 
 	drawing_area = gtk_drawing_area_new();
 	/* set a minimum size */
-	gtk_widget_set_size_request(drawing_area, disp_x_size * zoom, disp_y_size * zoom);
-
+	gtk_widget_set_size_request(drawing_area, w, h);
 	gtk_fixed_put(GTK_FIXED(fixed), drawing_area, 0, 0);
 
 	/* Signals used to handle the backing surface */

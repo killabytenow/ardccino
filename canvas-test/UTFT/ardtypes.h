@@ -18,7 +18,7 @@ typedef uint16_t           word;
 #define swap(t,a,b)                                 \
 		{                                   \
 			register t __swap__temp__c; \
-			__swap__temp__c = a;        \
+			__swap__temp__c = b;        \
 			b = a;                      \
 			a = __swap__temp__c;        \
 		}

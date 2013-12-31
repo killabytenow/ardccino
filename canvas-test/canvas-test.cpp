@@ -41,8 +41,11 @@ static void close_window(
 {
 	UTFT *utft = (UTFT *) data;
 
-	if(utft->surface)
+	g_print("closing window\n");
+	if(utft && utft->surface) {
+		g_print("- destroy surface\n");
 		cairo_surface_destroy(utft->surface);
+	}
 
 	gtk_main_quit();
 }
@@ -54,46 +57,64 @@ int main(int argc, char *argv[])
 	const gchar *model;
 	int zoom = 1;
 	GError *error = NULL;
+
+	///////////////////////////////////////////////////////////////////////
+	// GET COMMAND LINE PARAMETERS
+	///////////////////////////////////////////////////////////////////////
+
+	// build cli params
 	GOptionEntry entries[] = {
 		{ "model", 'm', 0, G_OPTION_ARG_STRING, &model, "Emulated UTFT screen", "M" },
 		{ "zoom",  'z', 0, G_OPTION_ARG_INT,    &zoom,  "Zoom factor",          "Z" },
 		{ NULL },
 	};
-
-	context = g_option_context_new("- UTFT emulator");
+	context = g_option_context_new("UTFT emulator");
 	g_option_context_add_main_entries(context, entries, NULL);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
+	// init app fetching app params
 	if(!gtk_init_with_args(&argc, &argv, "OJETE", entries, NULL, &error))
 		exit(1);
 
+	// set default values (if params were not set)
 	if(!model)
 		model = "SSD1963_800";
 	if(zoom < 1) {
 		g_print("Cannot accept a zoom factor smaller than 1");
 		exit(1);
 	}
-	g_print("model = %s\n", model);
-	g_print("zoom  = %d\n", zoom);
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), "Drawing Area");
+	// print debug crap
+	g_print("Assigned parameters\n");
+	g_print("\tmodel = %s\n", model);
+	g_print("\tzoom  = %d\n", zoom);
 
-	g_signal_connect(window, "destroy", G_CALLBACK(close_window), NULL);
+	///////////////////////////////////////////////////////////////////////
+	// BUILD THE MAIN APP WINDOW
+	///////////////////////////////////////////////////////////////////////
 
-	gtk_container_set_border_width(GTK_CONTAINER(window), 8);
-
-g_print("PEROLAIRE\n");
+	// build the UTFT widget (screen)
 	UTFT utft = UTFT(TFT01_22SP, 0, 0, 0, 0, 0);
 	utft.InitLCD(LANDSCAPE);
-	GtkWidget *utft_widget = utft.gtk_getLCDWidget();
-	gtk_container_add(GTK_CONTAINER(window), utft_widget);
-g_print("PEROLAS\n");
-	gtk_widget_show(utft_widget);
 
+	// create window and attach UTFT screen
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(window), "Drawing Area");
+	gtk_container_set_border_width(GTK_CONTAINER(window), 8);
 
+	gtk_container_add(GTK_CONTAINER(window), utft.gtk_getLCDWidget());
+	//gtk_window_set_resizable (GTK_WINDOW(mainWindow), FALSE);
+
+	//gtk_window_set_default_size(GTK_WINDOW(mainWindow), utft.getDisplayXSize(), utft.getDisplayYSize());
+	g_print("Screen x = %d y = %d\n", utft.getDisplayXSize(), utft.getDisplayYSize());
+	//gtk_window_set_resizable (GTK_WINDOW(mainWindow), FALSE);
+
+	// connect signals
+	g_signal_connect(window, "destroy", G_CALLBACK(close_window), &utft);
+
+	// here we go
+	gtk_widget_show(utft.gtk_getLCDWidget());
 	gtk_widget_show_all(window);
-
 	gtk_main();
 
 	return 0;
