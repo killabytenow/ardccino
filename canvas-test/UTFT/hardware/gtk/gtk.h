@@ -62,7 +62,7 @@ void UTFT::__set_pixel(void)
 	double r = ((double) ((((unsigned) gtk_color) >> 8) & 0xff)) / 247.0;
 	double g = ((double) ((((unsigned) gtk_color) >> 3) & 0xff)) / 251.0;
 	double b = ((double) ((((unsigned) gtk_color) << 3) & 0xff)) / 247.0;
-	g_print("Using color (%.2f, %.2f, %.2f)\n", r, g, b);
+	//g_print("Using color (%.2f, %.2f, %.2f)\n", r, g, b);
 	cairo_set_source_rgb(cr, r , g, b);
 	cairo_fill(cr);
 
@@ -112,8 +112,8 @@ static gboolean motion_notify_event_cb(
 				gpointer        data)
 {
 	UTFT *utft = (UTFT *) data;
-	int x, y;
 	GdkModifierType state;
+	int x, y;
 
 	/* paranoia check, in case we haven't gotten a configure event */
 	if(utft->surface == NULL)
@@ -129,7 +129,16 @@ static gboolean motion_notify_event_cb(
 	* we avoid getting a huge number of events faster than we
 	* can cope.
 	*/
+#if 1
+	gdk_window_get_device_position(
+		event->window,
+		gdk_device_manager_get_client_pointer(
+			gdk_display_get_device_manager(
+				gdk_window_get_display(event->window))),
+		&x, &y, &state);
+#else
 	gdk_window_get_pointer(event->window, &x, &y, &state);
+#endif
 	utft->gtk_last_x = x / utft->zoom;
 	utft->gtk_last_y = y / utft->zoom;
 
