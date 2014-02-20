@@ -26,7 +26,9 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#if ARDUINO != SIMULATOR
 #include <Arduino.h>
+#endif
 #include <UTFT.h>
 
 #include "ansi.h"

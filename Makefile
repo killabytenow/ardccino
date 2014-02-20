@@ -1,7 +1,7 @@
 ###############################################################################
 # Makefile
 #
-# OMFG!! A makefile!! A real makefile!!
+# Don't call directly. Use 
 #
 #   make             - no upload
 #   make clean       - remove all our dependencies
@@ -13,10 +13,11 @@
 #                      NOTE: If you want to change the baudrate, just set
 #                            MONITOR_BAUDRATE. If you don't set it, it defaults
 #                            to 9600 baud.
+#   make simulator   - build a GTK simulator
 #
 # ---------------------------------------------------------------------------
 # ardccino - Arduino dual PWM/DCC controller
-#   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+#   (C) 2013-2014 Gerardo García Peña <killabytenow@gmail.com>
 #
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License as published by the Free
@@ -34,24 +35,47 @@
 #
 ###############################################################################
 
-ARDUINO_DIR            = /usr/share/arduino/
-ARDMK_DIR              = /usr
-AVR_TOOLS_DIR          = /usr
-TARGET                 = Ardccino
-ARDUINO_LIBS           = UTFT
-BOARD_TAG              = mega2560
-#MCU                    = atmega328p
-#F_CPU                  = 16000000
-ARDUINO_PORT           = /dev/$(shell dmesg |grep 'FTDI USB Serial Device converter now attached to' | sed 's/^.*attached to //' | tail -n1)
-AVRDUDE_ARD_BAUDRATE   = 115200
-#AVRDUDE_ARD_PROGRAMMER = arduino
-AVRDUDE_ARD_PROGRAMMER = wiring
-USER_LIB_PATH          = ./libraries/
-MONITOR_BAUDRATE       = 115200
-ARD_RESET_OPTS         = $(ARDUINO_PORT)
+export ARDUINO_DIR            = /usr/share/arduino/
+export ARDMK_DIR              = /usr
+export AVR_TOOLS_DIR          = /usr
+export TARGET                 = Ardccino
+export ARDUINO_LIBS           = UTFT
+export BOARD_TAG              = mega2560
+#export MCU                    = atmega328p
+#export F_CPU                  = 16000000
+export ARDUINO_PORT           = /dev/$(shell dmesg |grep 'FTDI USB Serial Device converter now attached to' | sed 's/^.*attached to //' | tail -n1)
+export AVRDUDE_ARD_BAUDRATE   = 115200
+#export AVRDUDE_ARD_PROGRAMMER = arduino
+export AVRDUDE_ARD_PROGRAMMER = wiring
+export USER_LIB_PATH          = ./libraries/
+export MONITOR_BAUDRATE       = 115200
+export ARD_RESET_OPTS         = $(ARDUINO_PORT)
 
-include $(ARDUINO_DIR)/Arduino.mk
+all :
+	$(MAKE) -f Real.mk
 
-auto_tokens.h auto_clierrs.h auto_banner_wide.h auto_banner.h : gen_code.sh tokens.list clierrs.list banner.txt banner_wide.txt
-	./gen_code.sh
+clean :
+	$(MAKE) -f Simulator.mk clean
+	$(MAKE) -f Real.mk clean
+
+depends :
+	$(MAKE) -f Simulator.mk depends
+	$(MAKE) -f Real.mk depends
+
+reset :
+	$(MAKE) -f Real.mk reset
+
+raw_upload :
+	$(MAKE) -f Real.mk raw_upload
+
+show_boards :
+	$(MAKE) -f Real.mk show_boards
+
+monitor :
+	$(MAKE) -f Real.mk monitor
+
+simulator :
+	$(MAKE) -f Simulator.mk
+
+.PHONY : simulator
 
