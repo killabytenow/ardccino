@@ -27,8 +27,6 @@
  *
  *****************************************************************************/
 
-#include <Arduino.h>
-
 #include "config.h"
 #include "booster.h"
 #include "dcc.h"
@@ -87,6 +85,16 @@ void Cli::_msg(char *prefix, char *frmt, va_list args)
 					int m;
 					for(m = 16 - 4; m >= 0; m -= 4) {
 						x = ((unsigned) (n >> m) & (unsigned) 0x000f);
+						Serial.print((char) (x < 0x0a ? x + '0' : x + 'a' - 10));
+					}
+				}
+				break;
+			case 'p':
+				{
+					intptr_t n = va_arg(args, unsigned int), x;
+					int m;
+					for(m = 16 - 4; m >= 0; m -= 4) {
+						x = ((intptr_t) (n >> m) & (intptr_t) 0x000f);
 						Serial.print((char) (x < 0x0a ? x + '0' : x + 'a' - 10));
 					}
 				}

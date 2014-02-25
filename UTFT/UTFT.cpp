@@ -36,12 +36,12 @@
 */
 
 #include "UTFT.h"
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 #include <pins_arduino.h>
 #endif
 
 // Include hardware-specific functions for the correct MCU
-#if defined(UTFT_GTK_SIMULATION)
+#if defined(SIMULATOR)
 	#include "hardware/gtk/gtk.h"
 #elif defined(__AVR__)
 	#include <avr/pgmspace.h>
@@ -84,7 +84,7 @@
 
 UTFT::UTFT()
 {
-#ifdef UTFT_GTK_SIMULATION
+#ifdef SIMULATOR
 	fixed = NULL;
 	zoom = 1;
 #endif
@@ -238,7 +238,7 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 	}
 	display_model=model;
 
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		_set_direction_registers(display_transfer_mode);
@@ -293,7 +293,7 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 
 void UTFT::LCD_Write_COM(char VL)  
 {   
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		cbi(P_RS, B_RS);
@@ -309,7 +309,7 @@ void UTFT::LCD_Write_COM(char VL)
 
 void UTFT::LCD_Write_DATA(char VH,char VL)
 {
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -328,7 +328,7 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 
 void UTFT::LCD_Write_DATA(char VL)
 {
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -354,7 +354,7 @@ void UTFT::InitLCD(byte orientation)
 
 	_hw_special_init();
 
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	sbi(P_RST, B_RST);
 	delay(5); 
 	cbi(P_RST, B_RST);
@@ -1114,7 +1114,7 @@ void UTFT::print(char *st, int x, int y, int deg)
 			rotateChar(*st++, x, y, i, deg);
 }
 
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 void UTFT::print(String st, int x, int y, int deg)
 {
 	char buf[st.length()+1];
@@ -1358,7 +1358,7 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int deg
 
 void UTFT::lcdOff()
 {
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{
@@ -1374,7 +1374,7 @@ void UTFT::lcdOff()
 
 void UTFT::lcdOn()
 {
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{
@@ -1390,7 +1390,7 @@ void UTFT::lcdOn()
 
 void UTFT::setContrast(char c)
 {
-#ifndef UTFT_GTK_SIMULATION
+#ifndef SIMULATOR
 	cbi(P_CS, B_CS);
 	switch (display_model)
 	{

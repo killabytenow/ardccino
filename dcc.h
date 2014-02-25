@@ -26,7 +26,7 @@
 #ifndef __DCC_H__
 #define __DCC_H__
 
-#include <Arduino.h>
+#include "config.h"
 #include "booster.h"
 #include "booster_mngr.h"
 

@@ -26,7 +26,6 @@
 #ifndef __HWGUI_H__
 #define __HWGUI_H__
 
-#include <Arduino.h>
 #include "config.h"
 
 #ifdef HWGUI_ENABLE

@@ -5,7 +5,7 @@
  *
  * ---------------------------------------------------------------------------
  * ardccino - Arduino dual PWM/DCC controller
- *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *   (C) 2013-2014 Gerardo García Peña <killabytenow@gmail.com>
  *
  *   This program is free software; you can redistribute it and/or modify it
  *   under the terms of the GNU General Public License as published by the Free
@@ -26,8 +26,11 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#if ARDUINO != SIMULATOR
-#include <Arduino.h>
+#ifndef SIMULATOR
+#  include <Arduino.h>
+#  include <avr/interrupt.h>
+#else
+#  include "Ardsim.h"
 #endif
 #include <UTFT.h>
 

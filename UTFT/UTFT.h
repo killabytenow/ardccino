@@ -38,9 +38,9 @@
 #ifndef UTFT_h
 #define UTFT_h
 
-#ifdef UTFT_GTK_SIMULATION
+#ifdef SIMULATOR
 #include <gtk/gtk.h>
-#include "ardtypes.h"
+#include "Ardsim.h"
 #endif
 
 #define UTFT_VERSION	260
@@ -244,7 +244,7 @@ class UTFT
 		void _fast_fill_8(int ch, long pix);
 		void _convert_float(char *buf, double num, int width, byte prec);
 
-#ifdef UTFT_GTK_SIMULATION
+#ifdef SIMULATOR
 		int gtk_last_x, gtk_last_y;
 		int gtk_color;
 		int zoom;

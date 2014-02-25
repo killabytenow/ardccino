@@ -31,14 +31,20 @@
 #define DCC_CTC_ZERO    232
 #define DCC_CTC_ONE     116
 
+///////////////////////////////////////////////////////////////////////////////
+// ISR METHODS AND INTERRUPTION HANDLERS
+// (disabled automatically in simulator)
+///////////////////////////////////////////////////////////////////////////////
+
+unsigned dcc_excesive_lat;    // Debugging flag: Excesive latency
+
+#ifndef SIMULATOR
 static byte dcc_msg_idle[] = { 0xff, 0x00, 0xff };
 
-unsigned int lat;
-unsigned dcc_excesive_lat;
-int dcc_last_msg_id;
-char msg_pending;
-byte *msg = NULL;
-#define DCC_STATE_PREAMBLE 0
+int dcc_last_msg_id;          // Index of the last message sent
+char msg_pending;             // Bytes pending to be sent
+byte *msg = NULL;             // Pointer into the current msg
+
 ISR(TIMER1_COMPA_vect)
 {
 	dcc.isr_operations();
@@ -47,7 +53,7 @@ ISR(TIMER1_COMPA_vect)
 	// should be below 116 (a DCC one). Elsewhere the DCC generator will produce
 	// corrupt signals :P
 	//unsigned int 
-	lat = TCNT1;
+	unsigned int lat = TCNT1;
 	if(lat >= DCC_CTC_ONE)
 		dcc_excesive_lat = lat;
 }
@@ -60,21 +66,9 @@ ISR(TIMER1_COMPB_vect)
 	// should be below 116 (a DCC one). Elsewhere the DCC generator will produce
 	// corrupt signals :P
 	//unsigned int 
-	lat = TCNT1;
+	unsigned int lat = TCNT1;
 	if(lat >= DCC_CTC_ONE)
 		dcc_excesive_lat = lat;
-}
-
-DccMngr::DccMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
-{
-	service_booster = -1;
-}
-
-DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
-	: service_booster(service_booster), BoosterMngr(b, n)
-{
-	if(service_booster >= n)
-		cli.fatal("service_booster id is above nboosters.");
 }
 
 void DccMngr::isr_operations(void)
@@ -143,6 +137,19 @@ void DccMngr::isr(struct dcc_buffer_struct *pool)
 		}
 	}
 }
+#endif
+
+DccMngr::DccMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
+{
+	service_booster = -1;
+}
+
+DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
+	: service_booster(service_booster), BoosterMngr(b, n)
+{
+	if(service_booster >= n)
+		cli.fatal("service_booster id is above nboosters.");
+}
 
 void DccMngr::init(void)
 {
@@ -153,6 +160,7 @@ void DccMngr::init(void)
 	disable_interrupts();
 
 	// CONFIGURE TIMER 1
+#ifndef SIMULATOR
 	TCCR1A = (TCCR1A & 0b00001100)
 	       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
 	       | 0b00000000     // OC1A disconnected
@@ -170,6 +178,7 @@ void DccMngr::init(void)
 	TCCR2B = TCCR2B & 0b11110000;
 	OCR2A = OCR2B = 0;
 	TIMSK2 &= 0b11111000;
+#endif
 
 	// SET PWM OUTPUTS TO 1
 	for(int b = 0; b < _nboosters; b++)
@@ -188,10 +197,12 @@ void DccMngr::fini(void)
 	disable_interrupts();
 
 	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+#ifndef SIMULATOR
 	TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
 	TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
 	OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
 	TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
+#endif
 
 	enable_interrupts();
 }
@@ -271,7 +282,7 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
 			selected_buffer = buffer_pool + i;
 	}
 	//Serial.print("selected_buffer_id=");Serial.println(i);
-	Serial.print("selected_buffer=");Serial.println((int) selected_buffer);
+	cli.debug("selected_buffer=%p", selected_buffer);
 	if(!selected_buffer)
 		return NULL;
 

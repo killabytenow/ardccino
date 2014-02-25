@@ -28,14 +28,18 @@
 unsigned char sreg;
 void disable_interrupts(void)
 {
-  sreg = SREG;
-  cli();
+#ifndef SIMULATOR
+	sreg = SREG;
+	cli();
+#endif
 }
 
 void enable_interrupts(void)
 {
-  sei();
-  SREG = sreg;
+#ifndef SIMULATOR
+	sei();
+	SREG = sreg;
+#endif
 }
 
 

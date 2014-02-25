@@ -26,7 +26,7 @@
 #ifndef __BOOSTER_H__
 #define __BOOSTER_H__
 
-#include <Arduino.h>
+#include "config.h"
 
 class Booster {
 public:

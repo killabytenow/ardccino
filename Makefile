@@ -47,7 +47,7 @@ export ARDUINO_PORT           = /dev/$(shell dmesg |grep 'FTDI USB Serial Device
 export AVRDUDE_ARD_BAUDRATE   = 115200
 #export AVRDUDE_ARD_PROGRAMMER = arduino
 export AVRDUDE_ARD_PROGRAMMER = wiring
-export USER_LIB_PATH          = ./libraries/
+export USER_LIB_PATH          = ./
 export MONITOR_BAUDRATE       = 115200
 export ARD_RESET_OPTS         = $(ARDUINO_PORT)
 

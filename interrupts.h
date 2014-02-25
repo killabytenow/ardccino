@@ -26,7 +26,7 @@
 #ifndef __INTERRUPTS_H__
 #define __INTERRUPTS_H__
 
-#include <avr/interrupt.h>
+#include "config.h"
 
 void disable_interrupts(void);
 void enable_interrupts(void);
