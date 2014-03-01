@@ -1,4 +1,4 @@
-#include <avr/pgmspace.h>
+#include "config.h"
 
 // TinyFont.c 
 // Font Size	: 8x8

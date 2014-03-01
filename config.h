@@ -29,8 +29,10 @@
 #ifndef SIMULATOR
 #  include <Arduino.h>
 #  include <avr/interrupt.h>
+#  include <avr/pgmspace.h>
 #else
 #  include "Ardsim.h"
+#  include <stdlib.h>
 #endif
 #include <UTFT.h>
 

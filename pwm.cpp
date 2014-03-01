@@ -56,6 +56,7 @@ void PwmMngr::init(void)
 	disable_interrupts();
 
 	// CONFIGURE TIMERS
+#ifndef SIMULATOR
 	if(timers & (1 << 1)) {
 		// timer 1
 		TCCR1A = (TCCR1A & 0b00001100)
@@ -88,6 +89,7 @@ void PwmMngr::init(void)
 		default: cli.fatal("Cannot configure output pin for PWM output");
 		}
 	}
+#endif
 
 	//-------------------------------------------
 	// RESET PWM STATUS
@@ -102,10 +104,12 @@ void PwmMngr::fini(void)
 	disable_interrupts();
 
 	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+#ifndef SIMULATOR
 	TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
 	TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
 	OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
 	TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
+#endif
 
 	enable_interrupts();
 }
@@ -154,6 +158,7 @@ void PwmMngr::booster_refresh(Booster *b)
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->curr_power > 0);
 	unsigned char pwmvalue = b->min_power + abs(b->curr_power);
+#ifndef SIMULATOR
 	switch(b->pwmSignalPin) {
 	case  3: OCR2B = pwmvalue; break;
 	case  9: OCR1A = pwmvalue; break;
@@ -161,6 +166,7 @@ void PwmMngr::booster_refresh(Booster *b)
 	case 11: OCR2A = pwmvalue; break;
 	default: cli.fatal("Cannot write PWM output to pin");
 	}
+#endif
 }
 
 void PwmMngr::refresh(void)
