@@ -1,7 +1,12 @@
 ########################################################################
 # TARGET binary
+
+# Everything gets built in here (include BOARD_TAG now)
+OBJDIR  	= build-simulator
+
 TARGET  = simulator
-ARDUINO_LIBS += StdSerial
+ARDUINO_LIBS += StdSerial UTFT
+CORE_LIB = $(OBJDIR)/libcore.a
 
 ########################################################################
 # Arduino and system paths
@@ -24,9 +29,6 @@ endif
 ifndef USER_LIB_PATH
 USER_LIB_PATH = $(ARDUINO_SKETCHBOOK)/libraries
 endif
-
-# Everything gets built in here (include BOARD_TAG now)
-OBJDIR  	= build-simulator
 
 ########################################################################
 # Local sources
@@ -55,6 +57,10 @@ DEP_FILE   = $(OBJDIR)/depends.mk
 # General arguments
 USER_LIBS     = $(patsubst %,$(USER_LIB_PATH)/%,$(ARDUINO_LIBS))
 USER_INCLUDES = $(patsubst %,-I%,$(USER_LIBS))
+USER_LIB_CPP_SRCS   = $(wildcard $(patsubst %,%/*.cpp,$(USER_LIBS)))
+USER_LIB_C_SRCS     = $(wildcard $(patsubst %,%/*.c,$(USER_LIBS)))
+USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_CPP_SRCS)) \
+		$(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
 CPPFLAGS      = -DSIMULATOR -I. $(USER_INCLUDES) -g -w -Wall `pkg-config --cflags gtk+-3.0`
 CPPLIBS       = `pkg-config --libs gtk+-3.0`
 CFLAGS        = -std=gnu99
@@ -128,8 +134,11 @@ all: 		$(OBJDIR) $(TARGET)
 $(OBJDIR):
 		mkdir $(OBJDIR)
 
-$(TARGET): 	$(LOCAL_OBJS)
-		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) -lc -lm
+$(TARGET): 	$(LOCAL_OBJS) $(CORE_LIB)
+		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(CORE_LIB) -lc -lm -lstdc++ `pkg-config --libs gtk+-3.0`
+
+$(CORE_LIB):	$(USER_LIB_OBJS)
+		$(AR) rcs $@ $(USER_LIB_OBJS)
 
 $(DEP_FILE):	$(OBJDIR) $(DEPS)
 		cat $(DEPS) > $(DEP_FILE)

@@ -1,6 +1,8 @@
 #include <gtk/gtk.h>
-#include <stdlib.h>
+#include "config.h"
 #include "UTFT/UTFT.h"
+
+#ifdef SIMULATOR
 
 struct models_struct {
 	const char  *name;
@@ -120,3 +122,5 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+#endif

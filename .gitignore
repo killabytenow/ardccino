@@ -3,4 +3,5 @@ auto_banner_wide.h
 auto_clierrs.h
 auto_tokens.h
 build-mega2560
+build-simulator
 libraries
