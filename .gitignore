@@ -5,3 +5,4 @@ auto_tokens.h
 build-mega2560
 build-simulator
 libraries
+simulator

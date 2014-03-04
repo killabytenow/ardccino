@@ -11,7 +11,6 @@ static gboolean configure_event_cb(
 	UTFT *utft = (UTFT *) data;
 
 	g_print("configure_event_cb: received\n");
-
 	if(utft->surface)
 		cairo_surface_destroy(utft->surface);
 

@@ -5,7 +5,7 @@
 OBJDIR  	= build-simulator
 
 TARGET  = simulator
-ARDUINO_LIBS += StdSerial UTFT
+ARDUINO_LIBS += Simulator UTFT
 CORE_LIB = $(OBJDIR)/libcore.a
 
 ########################################################################

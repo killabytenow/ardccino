@@ -118,7 +118,12 @@ int main(int argc, char *argv[])
 	// here we go
 	gtk_widget_show(utft.gtk_getLCDWidget());
 	gtk_widget_show_all(window);
-	gtk_main();
+
+	//gtk_main();
+	while (gtk_main_iteration())
+		{
+		;
+		}
 
 	return 0;
 }
