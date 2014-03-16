@@ -9,21 +9,6 @@ ARDUINO_LIBS += Simulator UTFT
 CORE_LIB = $(OBJDIR)/libcore.a
 
 ########################################################################
-# Arduino and system paths
-#
-ifdef ARDUINO_DIR
-
-ARDUINO_LIB_PATH  = $(ARDUINO_DIR)/libraries
-ARDUINO_CORE_PATH = $(ARDUINO_DIR)/hardware/arduino/cores/arduino
-ARDUINO_VAR_PATH  = $(ARDUINO_DIR)/hardware/arduino/variants
-
-else
-
-echo $(error "ARDUINO_DIR is not defined")
-
-endif
-
-########################################################################
 # Miscellanea
 #
 ifndef USER_LIB_PATH
@@ -36,16 +21,15 @@ endif
 LOCAL_C_SRCS    = $(wildcard *.c)
 LOCAL_CPP_SRCS  = $(wildcard *.cpp)
 LOCAL_CC_SRCS   = $(wildcard *.cc)
+LOCAL_INO_SRCS  = $(wildcard *.ino)
 LOCAL_AS_SRCS   = $(wildcard *.S)
 LOCAL_OBJ_FILES = \
 	$(LOCAL_C_SRCS:.c=.o)     \
 	$(LOCAL_CPP_SRCS:.cpp=.o) \
 	$(LOCAL_CC_SRCS:.cc=.o)   \
+	$(LOCAL_INO_SRCS:.ino=.o) \
 	$(LOCAL_AS_SRCS:.S=.o)
 LOCAL_OBJS      = $(patsubst %,$(OBJDIR)/%,$(LOCAL_OBJ_FILES))
-
-# Dependency files
-DEPS            = $(LOCAL_OBJS:.o=.d)
 
 ########################################################################
 # Rules for making stuff
@@ -53,6 +37,10 @@ DEPS            = $(LOCAL_OBJS:.o=.d)
 
 # A list of dependencies
 DEP_FILE   = $(OBJDIR)/depends.mk
+
+# Names of executables
+CAT     = cat
+ECHO    = echo
 
 # General arguments
 USER_LIBS     = $(patsubst %,$(USER_LIB_PATH)/%,$(ARDUINO_LIBS))
@@ -68,15 +56,10 @@ CXXFLAGS      = -fno-exceptions
 ASFLAGS       = -I. -x assembler-with-cpp
 LDFLAGS       = -Wl,--gc-sections
 
+# Dependency files
+DEPS          = $(LOCAL_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d)
+
 # library sources
-$(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.c
-	mkdir -p $(dir $@)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
-
-$(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.cpp
-	mkdir -p $(dir $@)
-	$(CC) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
 	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
@@ -84,6 +67,25 @@ $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
 	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+
+$(OBJDIR)/libs/%.d: %.c
+	$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< -MF $@ -MT $(@:.d=.o)
+
+$(OBJDIR)/libs/%.d: %.cc
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+
+$(OBJDIR)/libs/%.d: %.cpp
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+
+$(OBJDIR)/libs/%.d: %.S
+	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
+
+$(OBJDIR)/libs/%.d: %.s
+	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
+
+$(OBJDIR)/%.cpp: %.ino
+	$(ECHO) '#include "Ardsim.h"' > $@
+	$(CAT)  $< >> $@
 
 # normal local sources
 # .o rules are for objects, .d for dependency tracking

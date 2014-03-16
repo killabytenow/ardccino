@@ -37,6 +37,22 @@ struct models_struct {
 	{ "ILI9341_S4P",     ILI9341_S4P,    },
 };
 
+extern void setup(void);
+extern void loop(void);
+
+static gpointer thread_func(gpointer data)
+{
+	//setup();
+	while(1) {
+		gdk_threads_enter();
+		//loop();
+		sleep(1);
+		gdk_threads_leave();
+	}
+
+	return( NULL );
+}
+
 static void close_window(
 		GtkWidget *widget,
 		gpointer   data)
@@ -59,6 +75,11 @@ int main(int argc, char *argv[])
 	const gchar *model;
 	int zoom = 1;
 	GError *error = NULL;
+	GThread   *thread;
+
+	if(!g_thread_supported())
+		g_thread_init(NULL);
+	gdk_threads_init();
 
 	///////////////////////////////////////////////////////////////////////
 	// GET COMMAND LINE PARAMETERS
@@ -75,6 +96,8 @@ int main(int argc, char *argv[])
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
 	// init app fetching app params
+	gdk_threads_enter();
+
 	if(!gtk_init_with_args(&argc, &argv, "OJETE", entries, NULL, &error))
 		exit(1);
 
@@ -119,11 +142,18 @@ int main(int argc, char *argv[])
 	gtk_widget_show(utft.gtk_getLCDWidget());
 	gtk_widget_show_all(window);
 
-	//gtk_main();
-	while (gtk_main_iteration())
-		{
-		;
-		}
+	/* Create new thread */
+	thread = g_thread_create(thread_func, NULL, FALSE, &error);
+	if(!thread) {
+		g_print( "Error: %s\n", error->message );
+		return( -1 );
+	}
+
+//utft.drawCircle(20, 20, 10);
+	gtk_main();
+	//while (gtk_main_iteration()) { ; }
+
+	gdk_threads_leave();
 
 	return 0;
 }

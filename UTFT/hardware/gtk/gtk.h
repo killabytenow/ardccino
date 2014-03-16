@@ -10,7 +10,7 @@ static gboolean configure_event_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
-	g_print("configure_event_cb: received\n");
+	g_print(__FILE__ ":%s: received\n", __func__);
 	if(utft->surface)
 		cairo_surface_destroy(utft->surface);
 
@@ -23,6 +23,8 @@ static gboolean configure_event_cb(
 
 	/* Initialize the surface to white */
 	utft->gtk_clear_surface();
+
+	g_print(__FILE__ ":%s: out\n", __func__);
 
 	/* We've handled the configure event, no need for further processing. */
 	return TRUE;
@@ -39,8 +41,10 @@ static gboolean draw_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
+	g_print(__FILE__ ":%s: received\n", __func__);
 	cairo_set_source_surface(cr, utft->surface, 0, 0);
 	cairo_paint(cr);
+	g_print(__FILE__ ":%s: out\n", __func__);
 
 	return FALSE;
 }
@@ -50,6 +54,7 @@ void UTFT::__set_pixel(void)
 {
 	cairo_t *cr;
 
+printf("hola\n");
 	/* Paint to the surface, where we store our state */
 	cr = cairo_create(surface);
 
@@ -72,6 +77,7 @@ void UTFT::__set_pixel(void)
 		drawing_area,
 		gtk_last_x * zoom, gtk_last_y * zoom,
 		zoom, zoom);
+printf("mundo\n");
 }
 
 /* Handle button press events by either drawing a rectangle
@@ -86,9 +92,12 @@ static gboolean button_press_event_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
+	g_print(__FILE__ ":%s: received\n", __func__);
 	/* paranoia check, in case we haven't gotten a configure event */
-	if(utft->surface == NULL)
+	if(utft->surface == NULL) {
+		g_print(__FILE__ ":%s: utft->surface is null\n", __func__);
 		return FALSE;
+	}
 
 	if(event->button == 1) {
 		utft->__set_pixel();
@@ -97,6 +106,7 @@ static gboolean button_press_event_cb(
 		gtk_widget_queue_draw(widget);
 	}
 
+	g_print(__FILE__ ":%s: out\n", __func__);
 	/* We've handled the event, stop processing */
 	return TRUE;
 }
@@ -114,9 +124,12 @@ static gboolean motion_notify_event_cb(
 	GdkModifierType state;
 	int x, y;
 
+	g_print(__FILE__ ":%s: received\n", __func__);
 	/* paranoia check, in case we haven't gotten a configure event */
-	if(utft->surface == NULL)
+	if(utft->surface == NULL) {
+		g_print(__FILE__ ":%s: utft->surface is null\n", __func__);
 		return FALSE;
+	}
 
 	/* This call is very important; it requests the next motion event.
 	* If you don't call gdk_window_get_pointer() you'll only get
@@ -145,6 +158,7 @@ static gboolean motion_notify_event_cb(
 		utft->__set_pixel();
 
 	/* We've handled it, stop processing */
+	g_print(__FILE__ ":%s: out\n", __func__);
 	return TRUE;
 }
 
@@ -194,6 +208,7 @@ void UTFT::_hw_special_init()
 				| GDK_BUTTON_PRESS_MASK
 				| GDK_POINTER_MOTION_MASK
 				| GDK_POINTER_MOTION_HINT_MASK);
+	g_print(__FILE__ ":%s: finished\n", __func__);
 }
 
 GtkWidget *UTFT::gtk_getLCDWidget(void)
