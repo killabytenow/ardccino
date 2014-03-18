@@ -1,4 +1,11 @@
 #include <gtk/gtk.h>
+#include <pty.h>
+#include <vte/vte.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <gdk/gdkkeysyms.h>
+#include <string.h>
 #include "config.h"
 #include "UTFT/UTFT.h"
 
@@ -35,19 +42,84 @@ struct models_struct {
 	{ "S6D0164",         S6D0164,        },
 	{ "ILI9341_S5P",     ILI9341_S5P,    },
 	{ "ILI9341_S4P",     ILI9341_S4P,    },
+	{ "ITDB32",          ITDB32,         },
+	{ "ITDB32WC",        ITDB32WC,       },
+	{ "TFT01_32W",       TFT01_32W,      },
+	{ "ITDB32S",         ITDB32S,        },
+	{ "TFT01_32",        TFT01_32,       },
+	{ "CTE32",           CTE32,          },
+	{ "GEEE32",          GEEE32,         },
+	{ "ITDB24",          ITDB24,         },
+	{ "ITDB24D",         ITDB24D,        },
+	{ "ITDB24DWOT",      ITDB24DWOT,     },
+	{ "ITDB28",          ITDB28,         },
+	{ "TFT01_24_8",      TFT01_24_8,     },
+	{ "TFT01_24_16",     TFT01_24_16,    },
+	{ "ITDB22",          ITDB22,         },
+	{ "GEEE22",          GEEE22,         },
+	{ "ITDB22SP",        ITDB22SP,       },
+	{ "ITDB32WD",        ITDB32WD,       },
+	{ "TFT01_32WD",      TFT01_32WD,     },
+	{ "CTE32W",          CTE32W,         },
+	{ "ITDB18SP",        ITDB18SP,       },
+	{ "LPH9135",         LPH9135,        },
+	{ "ITDB25H",         ITDB25H,        },
+	{ "ITDB43",          ITDB43,         },
+	{ "ITDB50",          ITDB50,         },
+	{ "TFT01_50",        TFT01_50,       },
+	{ "CTE50",           CTE50,          },
+	{ "ITDB24E_8",       ITDB24E_8,      },
+	{ "ITDB24E_16",      ITDB24E_16,     },
+	{ "INFINIT32",       INFINIT32,      },
+	{ "ELEE32_REVA",     ELEE32_REVA,    },
+	{ "GEEE24",          GEEE24,         },
+	{ "GEEE28",          GEEE28,         },
+	{ "ELEE32_REVB",     ELEE32_REVB,    },
+	{ "TFT01_70",        TFT01_70,       },
+	{ "CTE70",           CTE70,          },
+	{ "CTE32HR",         CTE32HR,        },
+	{ "CTE28",           CTE28,          },
+	{ "TFT01_28",        TFT01_28,       },
+	{ "CTE22",           CTE22,          },
+	{ "TFT01_22",        TFT01_22,       },
+	{ "TFT01_18SP",      TFT01_18SP,     },
+	{ "TFT01_22SP",      TFT01_22SP,     },
+	{ "MI0283QT9",       MI0283QT9,      },
 };
+
+int model_get_no(const gchar *model)
+{
+	int i;
+	for(i = 0; i < sizeof(models) / sizeof(struct models_struct); i++)
+		if(!strcmp(models[i].name, model))
+			return models[i].key;
+
+	return -1;
+}
+
+int pty_master, pty_slave;
 
 extern void setup(void);
 extern void loop(void);
 
 static gpointer thread_func(gpointer data)
 {
-	//setup();
-	while(1) {
-		gdk_threads_enter();
-		//loop();
-		sleep(1);
-		gdk_threads_leave();
+	int rc;
+	char buf[100];
+	setup();
+	//while(1) {
+	//	loop();
+	//}
+	while((rc = read(pty_slave, buf, sizeof(buf))) > 0) {
+		g_print("pelotas\n");
+		if (write(pty_slave, buf, rc) != rc) {
+			if (rc > 0) fprintf(stderr,"partial write");
+		} else {
+			if(rc < 0) {
+				perror("write error");
+				exit(-1);
+			}
+		}
 	}
 
 	return( NULL );
@@ -68,18 +140,22 @@ static void close_window(
 	gtk_main_quit();
 }
 
+void launch_thread(void)
+{
+	GThread *thread = g_thread_new("MyThread", thread_func, NULL);
+	if(!thread) {
+		g_print("Error launching thread\n");
+		exit(-1);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *window;
 	GOptionContext *context;
 	const gchar *model;
-	int zoom = 1;
+	int zoom = 1, model_no;
 	GError *error = NULL;
-	GThread   *thread;
-
-	if(!g_thread_supported())
-		g_thread_init(NULL);
-	gdk_threads_init();
 
 	///////////////////////////////////////////////////////////////////////
 	// GET COMMAND LINE PARAMETERS
@@ -96,14 +172,17 @@ int main(int argc, char *argv[])
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
 	// init app fetching app params
-	gdk_threads_enter();
-
 	if(!gtk_init_with_args(&argc, &argv, "OJETE", entries, NULL, &error))
 		exit(1);
 
 	// set default values (if params were not set)
-	if(!model)
+	if(!model || !strlen(model))
+		//model = "TFT01_22SP";
 		model = "SSD1963_800";
+	if((model_no = model_get_no(model)) < 0) {
+		g_print("Unknown screen model '%s'.\n", model);
+		exit(1);
+	}
 	if(zoom < 1) {
 		g_print("Cannot accept a zoom factor smaller than 1");
 		exit(1);
@@ -111,7 +190,7 @@ int main(int argc, char *argv[])
 
 	// print debug crap
 	g_print("Assigned parameters\n");
-	g_print("\tmodel = %s\n", model);
+	g_print("\tmodel = %s (%d)\n", model, model_no);
 	g_print("\tzoom  = %d\n", zoom);
 
 	///////////////////////////////////////////////////////////////////////
@@ -119,7 +198,7 @@ int main(int argc, char *argv[])
 	///////////////////////////////////////////////////////////////////////
 
 	// build the UTFT widget (screen)
-	UTFT utft = UTFT(TFT01_22SP, 0, 0, 0, 0, 0);
+	UTFT utft = UTFT(model_no, 0, 0, 0, 0, 0);
 	utft.zoom = zoom;
 	utft.InitLCD(LANDSCAPE);
 
@@ -143,17 +222,11 @@ int main(int argc, char *argv[])
 	gtk_widget_show_all(window);
 
 	/* Create new thread */
-	thread = g_thread_create(thread_func, NULL, FALSE, &error);
-	if(!thread) {
-		g_print( "Error: %s\n", error->message );
-		return( -1 );
-	}
+	launch_thread();
 
 //utft.drawCircle(20, 20, 10);
 	gtk_main();
 	//while (gtk_main_iteration()) { ; }
-
-	gdk_threads_leave();
 
 	return 0;
 }

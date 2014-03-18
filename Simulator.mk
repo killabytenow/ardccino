@@ -49,8 +49,8 @@ USER_LIB_CPP_SRCS   = $(wildcard $(patsubst %,%/*.cpp,$(USER_LIBS)))
 USER_LIB_C_SRCS     = $(wildcard $(patsubst %,%/*.c,$(USER_LIBS)))
 USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_CPP_SRCS)) \
 		$(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
-CPPFLAGS      = -DSIMULATOR -I. $(USER_INCLUDES) -g -w -Wall `pkg-config --cflags gtk+-3.0`
-CPPLIBS       = `pkg-config --libs gtk+-3.0`
+CPPFLAGS      = -DSIMULATOR -I. $(USER_INCLUDES) -g -Wall `pkg-config --cflags --libs gtk+-3.0 vte-2.90`
+CPPLIBS       = -lc -lm -lstdc++ -lutil `pkg-config --libs gtk+-3.0 vte-2.90`
 CFLAGS        = -std=gnu99
 CXXFLAGS      = -fno-exceptions
 ASFLAGS       = -I. -x assembler-with-cpp
@@ -62,7 +62,7 @@ DEPS          = $(LOCAL_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d)
 # library sources
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
 	mkdir -p $(dir $@)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
 	mkdir -p $(dir $@)
@@ -137,7 +137,7 @@ $(OBJDIR):
 		mkdir $(OBJDIR)
 
 $(TARGET): 	$(LOCAL_OBJS) $(CORE_LIB)
-		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(CORE_LIB) -lc -lm -lstdc++ `pkg-config --libs gtk+-3.0`
+		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(CORE_LIB) $(CPPLIBS)
 
 $(CORE_LIB):	$(USER_LIB_OBJS)
 		$(AR) rcs $@ $(USER_LIB_OBJS)
