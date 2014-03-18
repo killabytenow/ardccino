@@ -145,7 +145,7 @@ DccMngr::DccMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
 }
 
 DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
-	: service_booster(service_booster), BoosterMngr(b, n)
+	: BoosterMngr(b, n), service_booster(service_booster)
 {
 	if(service_booster >= n)
 		cli.fatal("service_booster id is above nboosters.");
@@ -153,8 +153,6 @@ DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
 
 void DccMngr::init(void)
 {
-	unsigned char sreg;
-
 	cli.debug("Initializing DCC.");
 
 	disable_interrupts();
@@ -246,7 +244,7 @@ void DccMngr::refresh(void)
 
 struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len)
 {
-	unsigned int address, command;
+	unsigned int address;
 	struct dcc_buffer_struct *selected_buffer;
 	struct dcc_buffer_struct *buffer_pool =
 		service ? srv_buffer_pool
@@ -272,7 +270,7 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
   
 	// search free buffer and kill other related buffers
 	selected_buffer = NULL;
-	for(char i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
+	for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
 		if(address == buffer_pool[i].address
 		|| !buffer_pool[i].address) {
 			buffer_pool[i].reps = 0;

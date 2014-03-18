@@ -445,8 +445,6 @@ void UTFT::InitLCD(byte orientation)
 
 void UTFT::setXY(word x1, word y1, word x2, word y2)
 {
-	int tmp;
-
 	if (orient==LANDSCAPE)
 	{
 		swap(word, x1, y1);
@@ -537,8 +535,6 @@ void UTFT::clrXY()
 
 void UTFT::drawRect(int x1, int y1, int x2, int y2)
 {
-	int tmp;
-
 	if (x1>x2)
 	{
 		swap(int, x1, x2);
@@ -556,8 +552,6 @@ void UTFT::drawRect(int x1, int y1, int x2, int y2)
 
 void UTFT::drawRoundRect(int x1, int y1, int x2, int y2)
 {
-	int tmp;
-
 	if (x1>x2)
 	{
 		swap(int, x1, x2);
@@ -581,8 +575,6 @@ void UTFT::drawRoundRect(int x1, int y1, int x2, int y2)
 
 void UTFT::fillRect(int x1, int y1, int x2, int y2)
 {
-	int tmp;
-
 	if (x1>x2)
 	{
 		swap(int, x1, x2);
@@ -630,8 +622,6 @@ void UTFT::fillRect(int x1, int y1, int x2, int y2)
 
 void UTFT::fillRoundRect(int x1, int y1, int x2, int y2)
 {
-	int tmp;
-
 	if (x1>x2)
 	{
 		swap(int, x1, x2);
@@ -1204,7 +1194,7 @@ void UTFT::printNumF(double num, byte dec, int x, int y, char divider, int lengt
 
 	if (divider != '.')
 	{
-		for (int i=0; i<sizeof(st); i++)
+		for (int i=0; i< (signed) sizeof(st); i++)
 			if (st[i]=='.')
 				st[i]=divider;
 	}
@@ -1214,13 +1204,13 @@ void UTFT::printNumF(double num, byte dec, int x, int y, char divider, int lengt
 		if (neg)
 		{
 			st[0]='-';
-			for (int i=1; i<sizeof(st); i++)
+			for (int i=1; i< (signed) sizeof(st); i++)
 				if ((st[i]==' ') || (st[i]=='-'))
 					st[i]=filler;
 		}
 		else
 		{
-			for (int i=0; i<sizeof(st); i++)
+			for (int i=0; i< (signed) sizeof(st); i++)
 				if (st[i]==' ')
 					st[i]=filler;
 		}
@@ -1257,7 +1247,6 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int sca
 {
 	unsigned int col;
 	int tx, ty, tc, tsx, tsy;
-	byte r, g, b;
 
 	if (scale==1)
 	{
@@ -1331,7 +1320,6 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int deg
 {
 	unsigned int col;
 	int tx, ty, newx, newy;
-	byte r, g, b;
 	double radian;
 	radian=deg*0.0175;  
 

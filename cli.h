@@ -47,7 +47,7 @@ class Cli {
 		void booster_status(Booster *b);
 
 		// output
-		void _msg(char *prefix, char *frmt, va_list args);
+		void _msg(const char *prefix, const char *frmt, va_list args);
 
 		// read input
 		void input_add(char c);
@@ -67,10 +67,10 @@ class Cli {
 		Cli(void);
 		void init(void);
 		void input_read(void);
-		void fatal(char *frmt, ...);
-		void debug(char *frmt, ...);
-		void info(char *frmt, ...);
-		void error(char *frmt, ...);
+		void fatal(const char *frmt, ...);
+		void debug(const char *frmt, ...);
+		void info(const char *frmt, ...);
+		void error(const char *frmt, ...);
 };
 
 #endif

@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
@@ -6,11 +8,14 @@
 class StdSerial
 {
 	public:
+		FILE *f;
+
 		StdSerial();
+		void set_fd(int fd);
 		void begin(int speed);
-		void print(char *str);
+		void print(const char *str);
 		void print(char c);
-		void println(char *str);
+		void println(const char *str);
 		void println(unsigned int i);
 		void println(void);
 		int available(void);

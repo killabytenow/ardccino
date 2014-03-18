@@ -89,8 +89,9 @@ struct models_struct {
 
 int model_get_no(const gchar *model)
 {
-	int i;
-	for(i = 0; i < sizeof(models) / sizeof(struct models_struct); i++)
+	for(int i = 0;
+	    i < (signed) (sizeof(models) / sizeof(struct models_struct));
+	    i++)
 		if(!strcmp(models[i].name, model))
 			return models[i].key;
 
@@ -101,12 +102,17 @@ int pty_master, pty_slave;
 
 extern void setup(void);
 extern void loop(void);
+#ifdef ENABLE_SCREEN
+extern UTFT tft;
+#endif
 
 static gpointer thread_func(gpointer data)
 {
 	int rc;
 	char buf[100];
-	setup();
+	g_print("pene woa\n");
+	//setup();
+	g_print("pene fuuu\n");
 	//while(1) {
 	//	loop();
 	//}
@@ -129,13 +135,15 @@ static void close_window(
 		GtkWidget *widget,
 		gpointer   data)
 {
-	UTFT *utft = (UTFT *) data;
-
 	g_print("closing window\n");
-	if(utft && utft->surface) {
+
+#ifdef ENABLE_SCREEN
+	UTFT *tft = (UTFT *) data;
+	if(tft && tft->surface) {
 		g_print("- destroy surface\n");
-		cairo_surface_destroy(utft->surface);
+		cairo_surface_destroy(tft->surface);
 	}
+#endif
 
 	gtk_main_quit();
 }
@@ -153,7 +161,7 @@ int main(int argc, char *argv[])
 {
 	GtkWidget *window;
 	GOptionContext *context;
-	const gchar *model;
+	const gchar *model = NULL;
 	int zoom = 1, model_no;
 	GError *error = NULL;
 
@@ -198,33 +206,57 @@ int main(int argc, char *argv[])
 	///////////////////////////////////////////////////////////////////////
 
 	// build the UTFT widget (screen)
-	UTFT utft = UTFT(model_no, 0, 0, 0, 0, 0);
-	utft.zoom = zoom;
-	utft.InitLCD(LANDSCAPE);
+#ifdef ENABLE_SCREEN
+	tft.zoom = zoom;
+	tft.InitLCD(LANDSCAPE);
+	g_print("Screen x = %d y = %d\n", tft.getDisplayXSize(), tft.getDisplayYSize());
+#endif
+
+	// create the terminal window
+	GtkWidget *vte = vte_terminal_new();
+	vte_terminal_set_background_transparent(VTE_TERMINAL(vte), FALSE);
+	vte_terminal_set_size(VTE_TERMINAL(vte), 80, 45);
+	vte_terminal_set_scrollback_lines(VTE_TERMINAL(vte), -1); /* infinite scrollback */
+	if(openpty(&pty_master, &pty_slave, NULL, NULL, NULL) < 0) {
+		perror("openpty error");
+		exit(-1);
+	}
+	g_print("chocho pty_master=%d pty_slave=%d\n", pty_master, pty_slave);
+	VtePty *vte_pty = vte_pty_new_foreign(pty_master, &error);
+	vte_terminal_set_pty_object(VTE_TERMINAL(vte), vte_pty);
+
+	vte_terminal_set_scroll_on_keystroke(VTE_TERMINAL (vte), TRUE);
+
+#ifdef ENABLE_SCREEN
+	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+	gtk_box_pack_start(GTK_BOX(box), tft.gtk_getLCDWidget(), FALSE, FALSE, 2);
+	gtk_box_pack_end(GTK_BOX(box), vte, TRUE, TRUE, 2);
+#endif
 
 	// create window and attach UTFT screen
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), "Drawing Area");
+	gtk_window_set_title(GTK_WINDOW(window), "Ardccino Simulator");
 	gtk_container_set_border_width(GTK_CONTAINER(window), 8);
 
-	gtk_container_add(GTK_CONTAINER(window), utft.gtk_getLCDWidget());
-	//gtk_window_set_resizable (GTK_WINDOW(mainWindow), FALSE);
-
-	//gtk_window_set_default_size(GTK_WINDOW(mainWindow), utft.getDisplayXSize(), utft.getDisplayYSize());
-	g_print("Screen x = %d y = %d\n", utft.getDisplayXSize(), utft.getDisplayYSize());
-	//gtk_window_set_resizable (GTK_WINDOW(mainWindow), FALSE);
+#ifdef ENABLE_SCREEN
+	gtk_container_add(GTK_CONTAINER(window), box);
+#else
+	gtk_container_add(GTK_CONTAINER(window), vte);
+#endif
 
 	// connect signals
-	g_signal_connect(window, "destroy", G_CALLBACK(close_window), &utft);
+#ifdef ENABLE_SCREEN
+	g_signal_connect(window, "destroy", G_CALLBACK(close_window), &tft);
+#endif
 
 	// here we go
-	gtk_widget_show(utft.gtk_getLCDWidget());
+	//gtk_widget_show(tft.gtk_getLCDWidget());
 	gtk_widget_show_all(window);
 
 	/* Create new thread */
 	launch_thread();
 
-//utft.drawCircle(20, 20, 10);
+//tft.drawCircle(20, 20, 10);
 	gtk_main();
 	//while (gtk_main_iteration()) { ; }
 

@@ -51,12 +51,21 @@ export USER_LIB_PATH          = ./
 export MONITOR_BAUDRATE       = 115200
 export ARD_RESET_OPTS         = $(ARDUINO_PORT)
 
-all :
+.PHONY : simulator real clean depends reset raw_upload show_boards monitor
+
+all : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h 
 	$(MAKE) -f Real.mk
+
+simulator : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
+	$(MAKE) -f Simulator.mk
+
+auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h : tokens.list clierrs.list banner.txt banner_wide.txt gen_code.sh
+	./gen_code.sh
 
 clean :
 	$(MAKE) -f Simulator.mk clean
 	$(MAKE) -f Real.mk clean
+	rm -f -- auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
 
 depends :
 	$(MAKE) -f Simulator.mk depends
@@ -73,9 +82,4 @@ show_boards :
 
 monitor :
 	$(MAKE) -f Real.mk monitor
-
-simulator :
-	$(MAKE) -f Simulator.mk
-
-.PHONY : simulator
 

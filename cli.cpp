@@ -58,13 +58,13 @@ void Cli::init(void)
 	Serial.print(ANSI_CSI "?1h");
 }
 
-void Cli::_msg(char *prefix, char *frmt, va_list args)
+void Cli::_msg(const char *prefix, const char *frmt, va_list args)
 {
 	Serial.print(ANSI_EL(2) "\r");
 	if(prefix)
 		Serial.print(prefix);
 
-	for(char *p = frmt; *p; p++) {
+	for(const char *p = frmt; *p; p++) {
 		if(*p == '%') {
 			switch(*++p) {
 			case '\0':
@@ -113,7 +113,7 @@ void Cli::_msg(char *prefix, char *frmt, va_list args)
 		Serial.println();
 }
 
-void Cli::debug(char *frmt, ...)
+void Cli::debug(const char *frmt, ...)
 {
 	va_list args;
 	va_start(args, frmt);
@@ -121,7 +121,7 @@ void Cli::debug(char *frmt, ...)
 	va_end(args);
 }
 
-void Cli::info(char *frmt, ...)
+void Cli::info(const char *frmt, ...)
 {
 	va_list args;
 	va_start(args, frmt);
@@ -129,7 +129,7 @@ void Cli::info(char *frmt, ...)
 	va_end(args);
 }
 
-void Cli::error(char *frmt, ...)
+void Cli::error(const char *frmt, ...)
 {
 	va_list args;
 	va_start(args, frmt);
@@ -137,7 +137,7 @@ void Cli::error(char *frmt, ...)
 	va_end(args);
 }
 
-void Cli::fatal(char *frmt, ...)
+void Cli::fatal(const char *frmt, ...)
 {
 	va_list args;
 	off.enable();
@@ -157,7 +157,7 @@ void Cli::input_reset(void)
 
 void Cli::input_add(char c)
 {
-	if(input_len + 1 >= sizeof(input))
+	if(input_len + 1 >= (signed) sizeof(input))
 		return;
 	input[input_len++] = c;
 	input[input_len] = '\0';
@@ -182,7 +182,7 @@ void Cli::about(void)
 {
 	char buffer[100];
 
-	for(int i = 0; i < sizeof(banner_wide) / sizeof(char *); i++) {
+	for(int i = 0; i < (signed) (sizeof(banner_wide) / sizeof(char *)); i++) {
 		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
 		info(buffer);
 	}
@@ -299,7 +299,7 @@ bool Cli::parse_integer(char *token, int *v)
 int Cli::parse_token(char *token, int *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
-	for(int i = 0; i < sizeof(cli_tokens) / sizeof(char *); i++) {
+	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(char *)); i++) {
 		strcpy_P(buffer, (char *) pgm_read_word(&(cli_tokens[i])));
 		if(!strcasecmp(token, buffer))
 			return i;
@@ -487,7 +487,7 @@ int Cli::execute(char **token, char ntokens)
 void Cli::parse(char *buffer)
 {
 	char *p, *token[10], ntokens;
-	int b, a, r;
+	int r;
 	char err[CLI_ERRS_MAX_LEN];
 
 	// tokenize

@@ -10,7 +10,7 @@ static gboolean configure_event_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
-	g_print(__FILE__ ":%s: received\n", __func__);
+//g_print(__FILE__ ":%s: received\n", __func__);
 	if(utft->surface)
 		cairo_surface_destroy(utft->surface);
 
@@ -24,7 +24,7 @@ static gboolean configure_event_cb(
 	/* Initialize the surface to white */
 	utft->gtk_clear_surface();
 
-	g_print(__FILE__ ":%s: out\n", __func__);
+//g_print(__FILE__ ":%s: out\n", __func__);
 
 	/* We've handled the configure event, no need for further processing. */
 	return TRUE;
@@ -41,10 +41,10 @@ static gboolean draw_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
-	g_print(__FILE__ ":%s: received\n", __func__);
+//g_print(__FILE__ ":%s: received\n", __func__);
 	cairo_set_source_surface(cr, utft->surface, 0, 0);
 	cairo_paint(cr);
-	g_print(__FILE__ ":%s: out\n", __func__);
+//g_print(__FILE__ ":%s: out\n", __func__);
 
 	return FALSE;
 }
@@ -66,7 +66,7 @@ printf("hola\n");
 	double r = ((double) ((((unsigned) gtk_color) >> 8) & 0xff)) / 247.0;
 	double g = ((double) ((((unsigned) gtk_color) >> 3) & 0xff)) / 251.0;
 	double b = ((double) ((((unsigned) gtk_color) << 3) & 0xff)) / 247.0;
-	//g_print("Using color (%.2f, %.2f, %.2f)\n", r, g, b);
+//g_print("Using color (%.2f, %.2f, %.2f)\n", r, g, b);
 	cairo_set_source_rgb(cr, r , g, b);
 	cairo_fill(cr);
 
@@ -92,7 +92,7 @@ static gboolean button_press_event_cb(
 {
 	UTFT *utft = (UTFT *) data;
 
-	g_print(__FILE__ ":%s: received\n", __func__);
+//g_print(__FILE__ ":%s: received\n", __func__);
 	/* paranoia check, in case we haven't gotten a configure event */
 	if(utft->surface == NULL) {
 		g_print(__FILE__ ":%s: utft->surface is null\n", __func__);
@@ -106,7 +106,7 @@ static gboolean button_press_event_cb(
 		gtk_widget_queue_draw(widget);
 	}
 
-	g_print(__FILE__ ":%s: out\n", __func__);
+//g_print(__FILE__ ":%s: out\n", __func__);
 	/* We've handled the event, stop processing */
 	return TRUE;
 }
@@ -124,7 +124,7 @@ static gboolean motion_notify_event_cb(
 	GdkModifierType state;
 	int x, y;
 
-	g_print(__FILE__ ":%s: received\n", __func__);
+//g_print(__FILE__ ":%s: received\n", __func__);
 	/* paranoia check, in case we haven't gotten a configure event */
 	if(utft->surface == NULL) {
 		g_print(__FILE__ ":%s: utft->surface is null\n", __func__);
@@ -158,7 +158,7 @@ static gboolean motion_notify_event_cb(
 		utft->__set_pixel();
 
 	/* We've handled it, stop processing */
-	g_print(__FILE__ ":%s: out\n", __func__);
+//g_print(__FILE__ ":%s: out\n", __func__);
 	return TRUE;
 }
 

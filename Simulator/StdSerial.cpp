@@ -1,5 +1,7 @@
+#include <gtk/gtk.h>
 #include "StdSerial.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -10,33 +12,41 @@ StdSerial::StdSerial()
 {
 }
 
+void StdSerial::set_fd(int fd)
+{
+	if((this->f = fdopen(fd, "rw")) == NULL) {
+		g_print("Cannot open fd %d.\n", fd);
+		exit(1);
+	}
+}
+
 void StdSerial::begin(int speed)
 {
 }
 
 void StdSerial::print(char c)
 {
-	putchar(c);
+	fputc(c, this->f);
 }
 
-void StdSerial::print(char *str)
+void StdSerial::print(const char *str)
 {
-	puts(str);
+	fputs(str, this->f);
 }
 
-void StdSerial::println(char *str)
+void StdSerial::println(const char *str)
 {
-	printf("%s\n", str);
+	fprintf(this->f, "%s\n", str);
 }
 
 void StdSerial::println(void)
 {
-	putchar('\n');
+	fputc('\n', this->f);
 }
 
 void StdSerial::println(unsigned int i)
 {
-	printf("%d\n", i);
+	fprintf(this->f, "%d\n", i);
 }
 
 int  StdSerial::available(void)
@@ -46,13 +56,13 @@ int  StdSerial::available(void)
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 	FD_ZERO(&fds);
-	FD_SET(fileno(stdin), &fds);
-	select(fileno(stdin)+1, &fds, NULL, NULL, &tv);
+	FD_SET(fileno(this->f), &fds);
+	select(fileno(this->f)+1, &fds, NULL, NULL, &tv);
 	return (FD_ISSET(0, &fds));
 }
 
 int  StdSerial::read(void)
 {
-	return getchar();
+	return fgetc(this->f);
 }
 

@@ -39,6 +39,7 @@ BoosterMngr *BoosterMngr::enable(void)
 		BoosterMngr::current->fini();
 	BoosterMngr::current = this;
 	this->init();
+	return this;
 }
 
 int BoosterMngr::enabled(void)
