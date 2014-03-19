@@ -9,6 +9,16 @@
 #include "config.h"
 #include "UTFT/UTFT.h"
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <termios.h>
+#include <errno.h>
+
+
 #ifdef SIMULATOR
 
 struct models_struct {
@@ -113,9 +123,9 @@ static gpointer thread_func(gpointer data)
 	g_print("pene woa\n");
 	setup();
 	g_print("pene fuuu\n");
-	//while(1) {
-	//	loop();
-	//}
+	while(1) {
+		loop();
+	}
 	while((rc = read(pty_slave, buf, sizeof(buf))) > 0) {
 		if (write(pty_slave, buf, rc) != rc) {
 			if (rc > 0) fprintf(stderr,"partial write");
@@ -155,6 +165,16 @@ void launch_thread(void)
 		exit(-1);
 	}
 }
+
+int checktty(struct termios *p, int term_fd)
+{
+	struct termios ck;
+	return (tcgetattr(term_fd, &ck) == 0 &&
+		(p->c_lflag == ck.c_lflag) &&
+		(p->c_cc[VMIN] == ck.c_cc[VMIN]) &&
+		(p->c_cc[VTIME] == ck.c_cc[VMIN]));
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -216,10 +236,31 @@ int main(int argc, char *argv[])
 	vte_terminal_set_background_transparent(VTE_TERMINAL(vte), FALSE);
 	vte_terminal_set_size(VTE_TERMINAL(vte), 80, 45);
 	vte_terminal_set_scrollback_lines(VTE_TERMINAL(vte), -1); /* infinite scrollback */
+	vte_terminal_set_emulation(VTE_TERMINAL(vte), "xterm");
 	if(openpty(&pty_master, &pty_slave, NULL, NULL, NULL) < 0) {
 		perror("openpty error");
 		exit(-1);
 	}
+
+
+	struct termios attr;
+	struct termios newterm;
+	errno=0;
+	tcgetattr(pty_master, &attr);  /* get current stty settings*/
+
+	newterm = attr; 
+	newterm.c_lflag &= ~(ECHO | ICANON); 
+	newterm.c_cc[VMIN] = 0; 
+	newterm.c_cc[VTIME] = 0; 
+
+	if(tcgetattr(pty_master, &attr) != 0
+	|| tcsetattr(pty_master, TCSAFLUSH, &newterm) != 0
+	|| checktty(&newterm, pty_master) == 0)
+	{
+		perror("cosa");
+		exit(1);
+	}
+
 	Serial.set_fd(pty_slave);
 	g_print("chocho pty_master=%d pty_slave=%d\n", pty_master, pty_slave);
 	VtePty *vte_pty = vte_pty_new_foreign(pty_master, &error);

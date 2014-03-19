@@ -52,7 +52,7 @@ void StdSerial::println(unsigned int i)
 	this->println(buffer);
 }
 
-int  StdSerial::available(void)
+int StdSerial::available(void)
 {
 	struct timeval tv;
 	fd_set fds;
@@ -61,7 +61,8 @@ int  StdSerial::available(void)
 	FD_ZERO(&fds);
 	FD_SET(this->fd, &fds);
 	select(this->fd+1, &fds, NULL, NULL, &tv);
-	return (FD_ISSET(0, &fds));
+//g_print("available = %d", FD_ISSET(this->fd, &fds));
+	return (FD_ISSET(this->fd, &fds));
 }
 
 int  StdSerial::read(void)
