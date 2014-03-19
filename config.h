@@ -141,7 +141,7 @@ extern Cli cli;
 // not need to be edited.
 //
 
-//#define ENABLE_SCREEN 1
+#define ENABLE_SCREEN 1
 
 #ifdef ENABLE_SCREEN
 #ifdef __DECLARE_GLOBALS__
@@ -152,7 +152,8 @@ extern Cli cli;
 #define TFT_DC        48
 #define TFT_RESET     50
 #define TFT_CS        52
-UTFT tft = UTFT(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
+//UTFT tft = UTFT(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
+UTFT tft = UTFT(SSD1963_800, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
 
 #else
 extern UTFT tft;

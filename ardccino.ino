@@ -30,8 +30,11 @@
 
 void setup(void)
 {
+g_print(__FILE__ ":%s: setup 0\n", __func__);
 	cli.init();
+g_print(__FILE__ ":%s: setup init done\n", __func__);
 	off.enable();
+g_print(__FILE__ ":%s: setup off done\n", __func__);
 
 // init menu ui
 //ui_curr = (struct ui_screen *) &ui_hello;

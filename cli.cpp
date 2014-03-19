@@ -50,8 +50,11 @@ Cli::Cli(void)
 
 void Cli::init(void)
 {
+g_print(__FILE__ ":%s: init 0\n", __func__);
 	Serial.begin(CLI_SERIAL_SPEED);
+g_print(__FILE__ ":%s: begin done\n", __func__);
 	Serial.println("Initializing");
+g_print(__FILE__ ":%s: first message sent\n", __func__);
 	
 	// enable "Set cursor key to application" DECCKM mode
 	//   This mode forbids user to move cursor freely along the screen :D

@@ -31,13 +31,13 @@
 class Booster {
 public:
 	// GENERIC INFO
-	char    *name;
-	uint8_t  pwmSignalPin;
-	uint8_t  dirSignalPin;
-	uint8_t  tmpAlarmPin;  // temperature alarm
-	uint8_t  ocpAlarmPin;  // over current protection alarm
-	uint8_t  rstSignalPin; // reset pin
-	bool     enabled;
+	const char *name;
+	uint8_t     pwmSignalPin;
+	uint8_t     dirSignalPin;
+	uint8_t     tmpAlarmPin;  // temperature alarm
+	uint8_t     ocpAlarmPin;  // over current protection alarm
+	uint8_t     rstSignalPin; // reset pin
+	bool        enabled;
 
 	// ANALOG CONTROL (PWM, analog, etc)
 	int      trgt_power;
@@ -50,7 +50,7 @@ public:
 	bool     inertial;
 
 	// METHODS
-	Booster(char   *name,
+	Booster(const char *name,
 		uint8_t pwmSignalPin, 
 		uint8_t dirSignalPin,
 		uint8_t tmpAlarmPin,

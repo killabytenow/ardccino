@@ -8,7 +8,7 @@
 class StdSerial
 {
 	public:
-		FILE *f;
+		int fd;
 
 		StdSerial();
 		void set_fd(int fd);

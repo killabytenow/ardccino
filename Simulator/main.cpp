@@ -111,13 +111,12 @@ static gpointer thread_func(gpointer data)
 	int rc;
 	char buf[100];
 	g_print("pene woa\n");
-	//setup();
+	setup();
 	g_print("pene fuuu\n");
 	//while(1) {
 	//	loop();
 	//}
 	while((rc = read(pty_slave, buf, sizeof(buf))) > 0) {
-		g_print("pelotas\n");
 		if (write(pty_slave, buf, rc) != rc) {
 			if (rc > 0) fprintf(stderr,"partial write");
 		} else {
@@ -221,6 +220,7 @@ int main(int argc, char *argv[])
 		perror("openpty error");
 		exit(-1);
 	}
+	Serial.set_fd(pty_slave);
 	g_print("chocho pty_master=%d pty_slave=%d\n", pty_master, pty_slave);
 	VtePty *vte_pty = vte_pty_new_foreign(pty_master, &error);
 	vte_terminal_set_pty_object(VTE_TERMINAL(vte), vte_pty);

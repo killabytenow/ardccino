@@ -26,7 +26,7 @@
 #include "config.h"
 #include "booster.h"
 
-Booster::Booster(char   *name,
+Booster::Booster(const char *name,
 		 uint8_t pwmSignalPin, 
 		 uint8_t dirSignalPin,
 		 uint8_t tmpAlarmPin,
