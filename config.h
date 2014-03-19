@@ -30,6 +30,7 @@
 #  include <Arduino.h>
 #  include <avr/interrupt.h>
 #  include <avr/pgmspace.h>
+#  define pgm_read_ptr(x) pgm_read_word(x)
 #else
 #  include "Ardsim.h"
 #  include <stdlib.h>

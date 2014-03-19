@@ -186,7 +186,7 @@ void Cli::about(void)
 	char buffer[100];
 
 	for(int i = 0; i < (signed) (sizeof(banner_wide) / sizeof(char *)); i++) {
-		strcpy_P(buffer, (char *) pgm_read_word(&(banner_wide[i])));
+		strcpy_P(buffer, (char *) pgm_read_ptr(&(banner_wide[i])));
 		info(buffer);
 	}
 }
@@ -303,7 +303,8 @@ int Cli::parse_token(char *token, int *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
 	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(char *)); i++) {
-		strcpy_P(buffer, (char *) pgm_read_word(&(cli_tokens[i])));
+		strcpy_P(buffer, (char *) pgm_read_ptr(&(cli_tokens[i])));
+g_print(__FILE__ ":%s:   compare against='%s'\n", __func__, buffer);
 		if(!strcasecmp(token, buffer))
 			return i;
 	}
@@ -451,6 +452,7 @@ int Cli::execute_dcc(char **token, char ntokens)
 
 int Cli::execute(char **token, char ntokens)
 {
+g_print(__FILE__ ":%s: execute token[0]='%s'\n", __func__, token[0]);
 	switch(parse_token(token[0], NULL)) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
@@ -499,16 +501,18 @@ void Cli::parse(char *buffer)
 	while(*p && ntokens < 10) {
 		while(*p && (*p == ' ' || *p == '\t')) p++;
 		if(!*p)
-		break;
+			break;
 
 		// delimit token
+g_print(__FILE__ ":%s: delimit token p=%p (%s) ntokens=%d\n", __func__, p, p, ntokens);
 		token[ntokens++] = p;
 		while(*p && *p != ' ' && *p != '\t') p++;
 		if(!*p)
-		break;
+			break;
 		*p++ = '\0';
 	}
 
+g_print(__FILE__ ":%s: tokens delimited p=%p (%s) ntokens=%d\n", __func__, p, p, ntokens);
 //debug("ntokens = %d", ntokens); for(int i = 0; i < ntokens; i++) debug("token[%d] = '%s'", i, token[i]);
 	// [ALL] ---
 	if(!ntokens)
@@ -520,7 +524,8 @@ void Cli::parse(char *buffer)
 		: CLI_ERR_BAD_SYNTAX;
 
 	// print error/ok string
-	strcpy_P(err, (char *) pgm_read_word(&(cli_errs[r])));
+g_print(__FILE__ ":%s: command status r=%d\n", __func__, r);
+	strcpy_P(err, (char *) pgm_read_ptr(&(cli_errs[r])));
 	if(!r)
 		info("%s", err);
 	else
@@ -537,13 +542,17 @@ void Cli::input_read(void)
 
 	while(Serial.available()) {
 		char c = Serial.read();
+g_print(__FILE__ ":%s: puta=%d (%c)\n", __func__, c, c);
 ojete:
 		switch(c) {
 		case 13:
+			break;
+		case 10:
 			Serial.println();
 			input_reading = false;
 			parse(input);
 			input_reset();
+g_print(__FILE__ ":%s: zas\n", __func__);
 			break;
 		case 127: // backspace
 			input_del();

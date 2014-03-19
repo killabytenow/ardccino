@@ -209,10 +209,14 @@ int main(int argc, char *argv[])
 	if((model_no = model_get_no(model)) < 0) {
 		g_print("Unknown screen model '%s'.\n", model);
 		exit(1);
+	} else {
+		tft = UTFT(model_no, 0, 0, 0, 0, 0);
 	}
 	if(zoom < 1) {
 		g_print("Cannot accept a zoom factor smaller than 1");
 		exit(1);
+	} else {
+		tft.zoom = zoom;
 	}
 
 	// print debug crap
@@ -226,7 +230,6 @@ int main(int argc, char *argv[])
 
 	// build the UTFT widget (screen)
 #ifdef ENABLE_SCREEN
-	tft.zoom = zoom;
 	tft.InitLCD(LANDSCAPE);
 	g_print("Screen x = %d y = %d\n", tft.getDisplayXSize(), tft.getDisplayYSize());
 #endif

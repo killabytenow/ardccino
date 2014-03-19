@@ -51,8 +51,9 @@ typedef uint16_t           word;
 		}
 #define cbi(x,y)
 #define sbi(x,y)
-#define pgm_read_byte(x)	(*((char *) (x)))
-#define pgm_read_word(x)	(*((uint16_t *) (x)))
+#define pgm_read_byte(x)	(*((byte *) (x)))
+#define pgm_read_word(x)	(*((word *) (x)))
+#define pgm_read_ptr(x)         (*((void **) (x)))
 
 #define strcpy_P(x, y)		strcpy((x), (y))
 

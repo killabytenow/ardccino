@@ -1245,8 +1245,8 @@ uint8_t UTFT::getFontYsize()
 
 void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int scale)
 {
-	unsigned int col;
-	int tx, ty, tc, tsx, tsy;
+	uint16_t col;
+	int16_t tx, ty, tc, tsx, tsy;
 
 	if (scale==1)
 	{
@@ -1318,8 +1318,8 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int sca
 
 void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int deg, int rox, int roy)
 {
-	unsigned int col;
-	int tx, ty, newx, newy;
+	word col;
+	int16_t tx, ty, newx, newy;
 	double radian;
 	radian=deg*0.0175;  
 
