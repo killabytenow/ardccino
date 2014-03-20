@@ -204,7 +204,6 @@ int main(int argc, char *argv[])
 
 	// set default values (if params were not set)
 	if(!model || !strlen(model))
-		//model = "TFT01_22SP";
 		model = "SSD1963_800";
 	if((model_no = model_get_no(model)) < 0) {
 		g_print("Unknown screen model '%s'.\n", model);
@@ -271,10 +270,14 @@ int main(int argc, char *argv[])
 
 	vte_terminal_set_scroll_on_keystroke(VTE_TERMINAL (vte), TRUE);
 
+	GtkWidget *vte_scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (vte_scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(vte_scrolled_window), vte);
+
 #ifdef ENABLE_SCREEN
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
 	gtk_box_pack_start(GTK_BOX(box), tft.gtk_getLCDWidget(), FALSE, FALSE, 2);
-	gtk_box_pack_end(GTK_BOX(box), vte, TRUE, TRUE, 2);
+	gtk_box_pack_end(GTK_BOX(box), vte_scrolled_window, TRUE, TRUE, 2);
 #endif
 
 	// create window and attach UTFT screen
@@ -285,7 +288,7 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_SCREEN
 	gtk_container_add(GTK_CONTAINER(window), box);
 #else
-	gtk_container_add(GTK_CONTAINER(window), vte);
+	gtk_container_add(GTK_CONTAINER(window), vte_scrolled_window);
 #endif
 
 	// connect signals
