@@ -33,7 +33,7 @@ PwmMngr::PwmMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
 
 void PwmMngr::init(void)
 {
-	uint8_t timers;
+	uint8_t timers = 0;
 
 	cli.debug("Initializing PWM.");
 
@@ -154,11 +154,12 @@ void PwmMngr::booster_refresh(Booster *b)
 		b->curr_power = b->trgt_power;
 		b->curr_accel = 0;
 	}
+	cli.debug("booster#%s power %d accel %d", b->name, b->curr_power, b->curr_accel);
 
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->curr_power > 0);
-	unsigned char pwmvalue = b->min_power + abs(b->curr_power);
 #ifndef SIMULATOR
+	unsigned char pwmvalue = b->min_power + abs(b->curr_power);
 	switch(b->pwmSignalPin) {
 	case  3: OCR2B = pwmvalue; break;
 	case  9: OCR1A = pwmvalue; break;

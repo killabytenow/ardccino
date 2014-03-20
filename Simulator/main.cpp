@@ -118,26 +118,11 @@ extern UTFT tft;
 
 static gpointer thread_func(gpointer data)
 {
-	int rc;
-	char buf[100];
-	g_print("pene woa\n");
 	setup();
-	g_print("pene fuuu\n");
-	while(1) {
+	while(1)
 		loop();
-	}
-	while((rc = read(pty_slave, buf, sizeof(buf))) > 0) {
-		if (write(pty_slave, buf, rc) != rc) {
-			if (rc > 0) fprintf(stderr,"partial write");
-		} else {
-			if(rc < 0) {
-				perror("write error");
-				exit(-1);
-			}
-		}
-	}
 
-	return( NULL );
+	return NULL;
 }
 
 static void close_window(
@@ -148,10 +133,8 @@ static void close_window(
 
 #ifdef ENABLE_SCREEN
 	UTFT *tft = (UTFT *) data;
-	if(tft && tft->surface) {
-		g_print("- destroy surface\n");
+	if(tft && tft->surface)
 		cairo_surface_destroy(tft->surface);
-	}
 #endif
 
 	gtk_main_quit();
@@ -204,7 +187,8 @@ int main(int argc, char *argv[])
 
 	// set default values (if params were not set)
 	if(!model || !strlen(model))
-		model = "SSD1963_800";
+		//model = "SSD1963_800";
+		model = "TFT01_22SP";
 	if((model_no = model_get_no(model)) < 0) {
 		g_print("Unknown screen model '%s'.\n", model);
 		exit(1);
@@ -230,7 +214,7 @@ int main(int argc, char *argv[])
 	// build the UTFT widget (screen)
 #ifdef ENABLE_SCREEN
 	tft.InitLCD(LANDSCAPE);
-	g_print("Screen x = %d y = %d\n", tft.getDisplayXSize(), tft.getDisplayYSize());
+	g_print("Screen size %dx%d\n", tft.getDisplayXSize(), tft.getDisplayYSize());
 #endif
 
 	// create the terminal window
@@ -264,7 +248,6 @@ int main(int argc, char *argv[])
 	}
 
 	Serial.set_fd(pty_slave);
-	g_print("chocho pty_master=%d pty_slave=%d\n", pty_master, pty_slave);
 	VtePty *vte_pty = vte_pty_new_foreign(pty_master, &error);
 	vte_terminal_set_pty_object(VTE_TERMINAL(vte), vte_pty);
 

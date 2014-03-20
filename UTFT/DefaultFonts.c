@@ -3,20 +3,19 @@
 // ------------------------------------------------------------------------------------------------
 
 #if defined(__AVR__)
-#	include <avr/pgmspace.h>
-#	define fontdatatype const uint8_t
+	#include <avr/pgmspace.h>
+	#define fontdatatype const uint8_t
 #elif defined(__PIC32MX__)
-#	define PROGMEM
-#	define fontdatatype const unsigned char
+	#define PROGMEM
+	#define fontdatatype const unsigned char
 #elif defined(__arm__)
-#	define PROGMEM
-#	define fontdatatype const unsigned char
+	#define PROGMEM
+	#define fontdatatype const unsigned char
 #elif defined SIMULATOR
-#	include "Ardsim.h"
-#	define PROGMEM
-#	define fontdatatype const uint8_t
+	#define PROGMEM
+	#define fontdatatype const unsigned char
 #else
-#	error "Unknown platform."
+	#error "Unknown platform."
 #endif
 
 // SmallFont.c 

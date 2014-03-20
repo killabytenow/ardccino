@@ -194,7 +194,9 @@ class UTFT
 		void setBackColor(uint32_t color);
 		word getBackColor();
 		void print(char *st, int x, int y, int deg=0);
-		//void print(String st, int x, int y, int deg=0);
+#ifndef SIMULATOR
+		void print(String st, int x, int y, int deg=0);
+#endif
 		void printNumI(long num, int x, int y, int length=0, char filler=' ');
 		void printNumF(double num, byte dec, int x, int y, char divider='.', int length=0, char filler=' ');
 		void setFont(uint8_t* font);

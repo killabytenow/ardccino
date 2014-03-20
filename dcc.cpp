@@ -39,7 +39,7 @@
 unsigned dcc_excesive_lat;    // Debugging flag: Excesive latency
 
 #ifndef SIMULATOR
-static byte dcc_msg_idle[] = { 0xff, 0x00, 0xff };
+static byte dcc_msg_idle[4] = { 0xff, 0x00, 0xff, 0x00 };
 
 int dcc_last_msg_id;          // Index of the last message sent
 char msg_pending;             // Bytes pending to be sent

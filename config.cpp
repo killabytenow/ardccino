@@ -1,11 +1,12 @@
 /*****************************************************************************
- * ardccino.ino
+ * config.c
  *
- * Setup and main loop
+ * Global configuration file -- this file only emits warnings and errors
+ * depending on set configuration
  *
  * ---------------------------------------------------------------------------
  * ardccino - Arduino dual PWM/DCC controller
- *   (C) 2013 Gerardo García Peña <killabytenow@gmail.com>
+ *   (C) 2013-2014 Gerardo García Peña <killabytenow@gmail.com>
  *
  *   This program is free software; you can redistribute it and/or modify it
  *   under the terms of the GNU General Public License as published by the Free
@@ -23,29 +24,17 @@
  *
  *****************************************************************************/
 
-#include <memorysaver.h>
-
-#define __DECLARE_GLOBALS__ 1
 #include "config.h"
 
-void setup(void)
-{
-	cli.init();
-	off.enable();
-
-// init menu ui
-//ui_curr = (struct ui_screen *) &ui_hello;
-//current_ui_handler = uiHandler;
-//current_ui_handler = cliHandler;
-}
-
-void loop(void)
-{
-	BoosterMngr::refresh_current();
-#ifdef CLI_ENABLED
-	cli.input_read();
+#ifdef JOY_ENABLED_WARNING
+#warning "Cannot enable hardware gui without an input method (enable joystick at least)"
 #endif
-  
-	delay(100);
-}
+
+#ifdef ENABLE_SCREEN_WARNING
+#warning "Cannot enable hardware gui without a screen or video output"
+#endif
+
+#if (!defined(HWGUI_ENABLE) && !defined(CLI_ENABLED))
+#error "Is stupid to build a controller without control input methods - enable serial CLI at least"
+#endif
 

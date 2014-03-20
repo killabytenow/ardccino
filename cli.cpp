@@ -51,11 +51,8 @@ Cli::Cli(void)
 
 void Cli::init(void)
 {
-g_print(__FILE__ ":%s: init 0\n", __func__);
 	Serial.begin(CLI_SERIAL_SPEED);
-g_print(__FILE__ ":%s: begin done\n", __func__);
 	Serial.println("Initializing");
-g_print(__FILE__ ":%s: first message sent\n", __func__);
 	
 	// enable "Set cursor key to application" DECCKM mode
 	//   This mode forbids user to move cursor freely along the screen :D
@@ -261,8 +258,16 @@ void Cli::booster_status(Booster *b)
 
 bool Cli::parse_integer(char *token, int *v)
 {
-	int n;
+	int n, neg;
 	int type;
+
+	// check negative
+	if(*token == '-') {
+		neg = -1;
+		token++;
+	} else {
+		neg = 1;
+	}
 
 	// identify number
 	if(strlen(token) > 2
@@ -309,25 +314,22 @@ bool Cli::parse_integer(char *token, int *v)
 	default:
 		fatal("unknown number type");
 	}
-	if(v) *v = n;
+	if(v) *v = n * neg;
 	return true;
 }
 
 int Cli::parse_token(char *token, int *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
+	unsigned l = strlen(token);
 	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(char *)); i++) {
 		strcpy_P(buffer, (char *) pgm_read_ptr(&(cli_tokens[i])));
-		if(!strcasecmp(token, buffer)) {
-			g_print(__FILE__ ":%s: identified token %s/%d\n", __func__, buffer, i);
+		if(l <= strlen(buffer) && !strncasecmp(token, buffer, strlen(token)))
 			return i;
-		}
 	}
-	if(v && parse_integer(token, v)) {
-		g_print(__FILE__ ":%s: identified CLI_TOKEN_INTEGER [%s=%d]\n", __func__, token, *v);
+	if(v && parse_integer(token, v))
 		return CLI_TOKEN_INTEGER;
-	}
-	g_print(__FILE__ ":%s: uknown token [%s]\n", __func__, token);
+	SIM_DBG("uknown token [%s]", token);
 
 	return -1;
 }
@@ -470,7 +472,7 @@ int Cli::execute_dcc(char **token, char ntokens)
 
 int Cli::execute(char **token, char ntokens)
 {
-g_print(__FILE__ ":%s: execute token[0]='%s'\n", __func__, token[0]);
+	SIM_DBG("execute token[0]='%s'", token[0]);
 	switch(parse_token(token[0], NULL)) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
@@ -527,7 +529,6 @@ void Cli::parse(char *buffer)
 			break;
 
 		// delimit token
-g_print(__FILE__ ":%s: delimit token p=%p (%s) ntokens=%d\n", __func__, p, p, ntokens);
 		token[ntokens++] = p;
 		while(*p && *p != ' ' && *p != '\t') p++;
 		if(!*p)
@@ -535,8 +536,6 @@ g_print(__FILE__ ":%s: delimit token p=%p (%s) ntokens=%d\n", __func__, p, p, nt
 		*p++ = '\0';
 	}
 
-g_print(__FILE__ ":%s: tokens delimited p=%p (%s) ntokens=%d\n", __func__, p, p, ntokens);
-//debug("ntokens = %d", ntokens); for(int i = 0; i < ntokens; i++) debug("token[%d] = '%s'", i, token[i]);
 	// [ALL] ---
 	if(!ntokens)
 		return;
@@ -547,7 +546,6 @@ g_print(__FILE__ ":%s: tokens delimited p=%p (%s) ntokens=%d\n", __func__, p, p,
 		: CLI_ERR_BAD_SYNTAX;
 
 	// print error/ok string
-g_print(__FILE__ ":%s: command status r=%d\n", __func__, r);
 	strcpy_P(err, (char *) pgm_read_ptr(&(cli_errs[r])));
 	if(!r)
 		info("%s", err);
@@ -604,7 +602,7 @@ ojete:
 			&& !(c >= '0' && c <= '9')
 			&& c != ' '
 			&& c != '?')
-				g_print(__FILE__ ":%s: puta=%d (%c)\n", __func__, c, c);
+				SIM_DBG("puta=%d (%c)", c, c);
 			input_add(c);
 		}
 	}

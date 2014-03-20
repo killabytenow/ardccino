@@ -31,9 +31,11 @@
 #  include <avr/interrupt.h>
 #  include <avr/pgmspace.h>
 #  define pgm_read_ptr(x) pgm_read_word(x)
+#  define SIM_DBG(...)
 #else
 #  include "Ardsim.h"
 #  include <stdlib.h>
+#  define SIM_DBG(frm, ...)    g_print(__FILE__ ":%s:" frm "\n", __func__, __VA_ARGS__)
 #endif
 #include <UTFT.h>
 
@@ -186,12 +188,12 @@ extern UTFT tft;
 //#define HWGUI_ENABLE 1
 
 #ifndef JOY_ENABLED
-#warning "Cannot enable hardware gui without an input method (enable joystick at least)"
+#define JOY_ENABLED_WARNING
 #undef HWGUI_ENABLE
 #endif
 
 #ifndef ENABLE_SCREEN
-#warning "Cannot enable hardware gui without a screen or video output"
+#define ENABLE_SCREEN_WARNING
 #undef HWGUI_ENABLE
 #endif
 
@@ -203,10 +205,6 @@ extern UTFT tft;
 
 #ifndef SERVICE_TRACK
 #define SERVICE_TRACK -1
-#endif
-
-#if (!defined(HWGUI_ENABLE) && !defined(CLI_ENABLED))
-#error "Is stupid to build a controller without control input methods - enable serial CLI at least"
 #endif
 
 #endif

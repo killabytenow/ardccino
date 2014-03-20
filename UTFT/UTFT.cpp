@@ -36,7 +36,7 @@
 */
 
 #include "UTFT.h"
-#ifndef SIMULATOR
+#if !defined(SIMULATOR)
 #include <pins_arduino.h>
 #endif
 
@@ -1356,7 +1356,7 @@ void UTFT::lcdOff()
 	}
 	sbi(P_CS, B_CS);
 #else
-// TODO: Switch off
+#warning "TODO: Switch off"
 #endif
 }
 
@@ -1372,7 +1372,7 @@ void UTFT::lcdOn()
 	}
 	sbi(P_CS, B_CS);
 #else
-// TODO: Switch on
+#warning "TODO: Switch on"
 #endif
 }
 
@@ -1390,7 +1390,7 @@ void UTFT::setContrast(char c)
 	}
 	sbi(P_CS, B_CS);
 #else
-// TODO: set contrast
+#warning "TODO: set contrast"
 #endif
 }
 
