@@ -209,8 +209,9 @@ unsigned int dir = 0;
 void DccMngr::refresh(void)
 {
 	static unsigned int lolol = 0;
+
+	// update only each 20 iterations
 	if(lolol++ >= 20) {
-		Serial.println("YEP!");
 		//byte msg[] = { 3, 0b10000000 };
 		//msg[1] |= dir ? 0b10010000 : 0;
 		byte msg[] = { 3, 0b01001000 };
@@ -231,15 +232,11 @@ void DccMngr::refresh(void)
 			for(int i = 0; i < 5; i++)
 			Serial.println("                                              ");
 		}
-	} else {
-		Serial.print("----");
 	}
 
-	if(dcc_excesive_lat) {
-		Serial.print("dcc_excesive_lat = ");
-		Serial.println(dcc_excesive_lat);
-		Serial.println("!       ");
-	}
+	// warn about excesive latencies
+	if(dcc_excesive_lat)
+		cli.error("dcc_excesive_lat = %d", dcc_excesive_lat);
 }
 
 struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len)
@@ -279,7 +276,7 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
 		if(!selected_buffer && buffer_pool[i].reps < 0)
 			selected_buffer = buffer_pool + i;
 	}
-	//Serial.print("selected_buffer_id=");Serial.println(i);
+	Serial.print("xxxxxxxx");
 	cli.debug("selected_buffer=%p", selected_buffer);
 	if(!selected_buffer)
 		return NULL;

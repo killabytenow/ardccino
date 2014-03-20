@@ -49,7 +49,7 @@ void StdSerial::println(unsigned int i)
 {
 	char buffer[1024];
 	snprintf(buffer, sizeof(buffer) - 1, "%d\n", i);
-	this->println(buffer);
+	write(this->fd, buffer, strlen(buffer));
 }
 
 int StdSerial::available(void)

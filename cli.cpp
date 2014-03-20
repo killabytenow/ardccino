@@ -304,12 +304,16 @@ int Cli::parse_token(char *token, int *v)
 	char buffer[CLI_TOKEN_MAX_LEN];
 	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(char *)); i++) {
 		strcpy_P(buffer, (char *) pgm_read_ptr(&(cli_tokens[i])));
-g_print(__FILE__ ":%s:   compare against='%s'\n", __func__, buffer);
-		if(!strcasecmp(token, buffer))
+		if(!strcasecmp(token, buffer)) {
+			g_print(__FILE__ ":%s: identified token %s/%d\n", __func__, buffer, i);
 			return i;
+		}
 	}
-	if(parse_integer(token, v))
+	if(v && parse_integer(token, v)) {
+		g_print(__FILE__ ":%s: identified CLI_TOKEN_INTEGER [%s=%d]\n", __func__, token, *v);
 		return CLI_TOKEN_INTEGER;
+	}
+	g_print(__FILE__ ":%s: uknown token [%s]\n", __func__, token);
 
 	return -1;
 }
@@ -491,8 +495,8 @@ g_print(__FILE__ ":%s: execute token[0]='%s'\n", __func__, token[0]);
 
 void Cli::parse(char *buffer)
 {
-	char *p, *token[10], ntokens;
-	int r;
+	char *p, *token[10];
+	int ntokens, r;
 	char err[CLI_ERRS_MAX_LEN];
 
 	// tokenize
