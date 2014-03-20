@@ -220,17 +220,9 @@ void DccMngr::refresh(void)
 		lolol = 0;
 		struct dcc_buffer_struct *b = send_msg(false, msg, sizeof(msg));
 		if(b) {
-			Serial.print("\r\nmsg.len = "); Serial.print(b->len); Serial.print("     ");
-			for(unsigned char i = 0; i < b->len; i++) {
-				Serial.print("\r\nmsg[");
-				Serial.print(i);
-				Serial.print("] = ");
-				Serial.print(b->msg[i]);
-				Serial.print("    ");
-			}
-		} else {
-			for(int i = 0; i < 5; i++)
-			Serial.println("                                              ");
+			cli.debug("nmsg.len = %d", b->len);
+			for(unsigned char i = 0; i < b->len; i++)
+				cli.debug("    msg[%d] = %d", i, b->msg[i]);
 		}
 	}
 
@@ -258,7 +250,6 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
 			cli.fatal("Message too short (2 byte address in a 2 byte packet)");
 		address = address << 8 | msg[1];
 	}
-	//Serial.print("address=");Serial.println(address);
   
 	// extract command
 	//command = *n & 0b11100000;
@@ -276,8 +267,7 @@ struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len
 		if(!selected_buffer && buffer_pool[i].reps < 0)
 			selected_buffer = buffer_pool + i;
 	}
-	Serial.print("xxxxxxxx");
-	cli.debug("selected_buffer=%p", selected_buffer);
+	cli.debug("selected_buffer=%d", selected_buffer);
 	if(!selected_buffer)
 		return NULL;
 

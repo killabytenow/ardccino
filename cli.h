@@ -42,7 +42,9 @@ class Cli {
 		bool input_reading;
 
 		// command actions
+		void _print_text(char **text, int l);
 		void about(void);
+		void help(void);
 		void booster_list(void);
 		void booster_status(Booster *b);
 

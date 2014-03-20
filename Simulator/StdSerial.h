@@ -15,7 +15,11 @@ class StdSerial
 		void begin(int speed);
 		void print(const char *str);
 		void print(char c);
+		void print(int c);
+		void print(unsigned int c);
 		void println(const char *str);
+		void println(char c);
+		void println(int i);
 		void println(unsigned int i);
 		void println(void);
 		int available(void);

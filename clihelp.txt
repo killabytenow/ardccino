@@ -1,0 +1,29 @@
+GLOBAL COMMANDS:
+	about
+	booster list
+	booster <n> power (off|on)
+	booster <n> reset
+	booster <n> status
+
+OFF MODE:
+	off
+
+PWM MODE:
+	pwm
+	booster <n> power <v>
+	booster <n> mode (direct|inertial)
+	booster <n> minimum power [<v>]
+	booster <n> acceleration [<a>]
+	booster <n> maximum acceleration [<a>]
+
+DCC MODE:
+	dcc
+	dcc track (operations|service)
+	dcc mode (pass_through|stateful)
+	dcc [!] <n> speed [4bit|5bit|7bit] [+-]<v> [acked]
+	dcc [!] <n> f <f> (on|off) [acked]
+	dcc [!] <n> analog <f> <v> [acked]
+	dcc [!] <n> address (advanced|normal) [acked]
+	dcc [!] <n> ack (service|railcom|off)
+	dcc [!] <n> send [service] command <bytes...> [acked]
+	dcc [!] <n> read <v> [mode (paged|direct)]

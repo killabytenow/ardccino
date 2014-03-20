@@ -102,8 +102,8 @@ echo "};" >> "$OUT_H"
 # BUILD .banner_wide.h and .banner.h
 #==============================================================================
 
-for BANNER in banner_wide banner; do
-	OUT_H="auto_$BANNER.h"
+for FILE in banner_wide banner clihelp; do
+	OUT_H="auto_${FILE}.h"
 	N=0
 	MAX_LEN=0
 
@@ -111,16 +111,16 @@ for BANNER in banner_wide banner; do
 	echo ""                                                  >> "$OUT_H"
 	echo "#include \"config.h\""                             >> "$OUT_H"
 	echo ""                                                  >> "$OUT_H"
-	for L in `cat $BANNER.txt`; do
-		echo "PROGMEM const char ${BANNER}_$N[] = \"$L\";"
+	for L in `cat ${FILE}.txt`; do
+		echo "PROGMEM const char ${FILE}_$N[] = \"$L\";"
 		M="`echo -n "$L" | wc -c`"
 		if [ "$M" -gt "$MAX_LEN" ]; then MAX_LEN="$M"; fi
 		N=$(($N + 1))
 	done >> "$OUT_H"
-	echo "#define ${BANNER}_MAX_LEN $(($MAX_LEN + 1))" >> "$OUT_H"
-	echo "PROGMEM const char * const $BANNER[] = {" >> "$OUT_H"
+	echo "#define ${FILE}_MAX_LEN $(($MAX_LEN + 1))" >> "$OUT_H"
+	echo "PROGMEM const char * const $FILE[] = {" >> "$OUT_H"
 	for i in `seq 0 $(($N - 1))`; do
-		echo "	${BANNER}_$i,"
+		echo "	${FILE}_$i,"
 	done >> "$OUT_H"
 	echo "};"    >> "$OUT_H"
 done

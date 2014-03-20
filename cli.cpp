@@ -38,9 +38,10 @@
 
 // following files are generated with 'gen_code.sh' script using the contents
 // of 'tokens.list', 'clierrs.list' and 'banner_wide.txt' files.
-#include "auto_tokens.h"
-#include "auto_clierrs.h"
 #include "auto_banner_wide.h"
+#include "auto_clierrs.h"
+#include "auto_clihelp.h"
+#include "auto_tokens.h"
 
 Cli::Cli(void)
 {
@@ -74,7 +75,10 @@ void Cli::_msg(const char *prefix, const char *frmt, va_list args)
 				Serial.print('%');
 				break;
 			case 'd':
-				Serial.print((int) va_arg(args, int));
+				{
+				int x = va_arg(args, int);
+				Serial.print(x);
+				}
 				break;
 			case 's':
 				Serial.print((char *) va_arg(args, char *));
@@ -181,14 +185,24 @@ void Cli::input_del(void)
 // ACTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
-void Cli::about(void)
+void Cli::_print_text(char **text, int l)
 {
 	char buffer[100];
 
-	for(int i = 0; i < (signed) (sizeof(banner_wide) / sizeof(char *)); i++) {
-		strcpy_P(buffer, (char *) pgm_read_ptr(&(banner_wide[i])));
+	for(int i = 0; i < l; i++) {
+		strcpy_P(buffer, (char *) pgm_read_ptr(&(text[i])));
 		info(buffer);
 	}
+}
+
+void Cli::about(void)
+{
+	_print_text((char **) banner_wide, (signed) (sizeof(banner_wide) / sizeof(char *)));
+}
+
+void Cli::help(void)
+{
+	_print_text((char **) clihelp, (signed) (sizeof(clihelp) / sizeof(char *)));
 }
 
 void Cli::booster_list(void)
@@ -463,6 +477,11 @@ g_print(__FILE__ ":%s: execute token[0]='%s'\n", __func__, token[0]);
 		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
 		about();
 		break;
+	// COMMAND: help
+  	case CLI_TOKEN_HELP:
+		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
+		help();
+		break;
 	// COMMAND: off
 	case CLI_TOKEN_OFF:
 		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;
@@ -546,7 +565,6 @@ void Cli::input_read(void)
 
 	while(Serial.available()) {
 		char c = Serial.read();
-g_print(__FILE__ ":%s: puta=%d (%c)\n", __func__, c, c);
 ojete:
 		switch(c) {
 		case 13:
@@ -556,7 +574,6 @@ ojete:
 			input_reading = false;
 			parse(input);
 			input_reset();
-g_print(__FILE__ ":%s: zas\n", __func__);
 			break;
 		case 127: // backspace
 			input_del();
@@ -579,7 +596,15 @@ g_print(__FILE__ ":%s: zas\n", __func__);
 				goto ojete;
 			}
 			break;
+		case '9':
+			break;
 		default:
+			if(!(c >= 'a' && c <= 'z')
+			&& !(c >= 'A' && c <= 'Z')
+			&& !(c >= '0' && c <= '9')
+			&& c != ' '
+			&& c != '?')
+				g_print(__FILE__ ":%s: puta=%d (%c)\n", __func__, c, c);
 			input_add(c);
 		}
 	}
