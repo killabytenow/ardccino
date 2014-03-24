@@ -37,12 +37,21 @@ private:
 	bool focus;
 
 protected:
-	UIScreen *on_event(uint8_t event);
+	virtual UIScreen *on_event(uint8_t event) = 0;
+	virtual void draw(void) = 0;
+	virtual void do_open_event(void) { draw(); };
+	virtual void do_close_event(void) { };
+	virtual UIScreen *do_tick_event(void) { return NULL; };
 
 public:
 	static void handle(void);
 	void send_event(uint8_t event);
 };
+
+class UIHello : UIScreen {
+private:
+	int       ticks_to_go;
+}
 
 #define UI_EVENT_IDLE           0
 #define UI_EVENT_OPEN           1

@@ -44,9 +44,9 @@ uint16_t tft_ysize;
 
 void utftSetup(void)
 {
-  tft.setFont(TinyFont);
-  tft_xsize = tft.getDisplayXSize();
-  tft_ysize = tft.getDisplayYSize();
+	tft.setFont(TinyFont);
+	tft_xsize = tft.getDisplayXSize();
+	tft_ysize = tft.getDisplayYSize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,90 +71,66 @@ void utftSetup(void)
 // GLOBAL HANDLER
 void UIScreen::handle(void)
 {
-  struct ui_screen *next_ui;
-  static int last_key = 0;
-  int event, k;
-  
-  // open UI if not opened yet
-  if(!ui_curr->focus) {
-    next_ui = ui_curr->on_event(ui_curr, UI_EVENT_OPEN);
-    ui_curr->focus = 1;
-    if(next_ui)
-      fatal("ui_handler: fast close");
-  }
+	struct ui_screen *next_ui;
+	static int last_key = 0;
+	int event, k;
 
-  // get joystick events
-  joyRead();
-  event = UI_EVENT_IDLE;
-  if(joyPressedButton())     event = UI_EVENT_SELECT;
-  else if(joyPressedUp())    event = UI_EVENT_PRESSED_UP;
-  else if(joyPressedDown())  event = UI_EVENT_PRESSED_DOWN;
-  else if(joyPressedLeft())  event = UI_EVENT_PRESSED_LEFT;
-  else if(joyPressedRight()) event = UI_EVENT_PRESSED_RIGHT;
-  else if(joyMoveUp())       event = UI_EVENT_UP;
-  else if(joyMoveDown())     event = UI_EVENT_DOWN;
-  else if(joyMoveLeft())     event = UI_EVENT_LEFT;
-  else if(joyMoveRight())    event = UI_EVENT_RIGHT;
-    
-  // get keys
-  k = 0;
-  if(Serial.available() > 0) {
-    int c;
-    if((c = Serial.read()) == 27
-    && (c = Serial.read()) == 91)
-    { // escape char
-      k = Serial.read() | 0x1000;
-      switch(k) {
-        case 66 | 0x1000: event = last_key == k ? UI_EVENT_DOWN  : UI_EVENT_PRESSED_DOWN;  break;
-        case 65 | 0x1000: event = last_key == k ? UI_EVENT_UP    : UI_EVENT_PRESSED_UP;    break;
-        case 68 | 0x1000: event = last_key == k ? UI_EVENT_LEFT  : UI_EVENT_PRESSED_LEFT;  break;
-        case 67 | 0x1000: event = last_key == k ? UI_EVENT_RIGHT : UI_EVENT_PRESSED_RIGHT; break;
-        //default:
-          //Serial.print("escape => "); Serial.print(k & 0xff);
-      }
-    } else {
-      if(c == 13) {
-        event = UI_EVENT_SELECT;
-      }
-    }
-  }
-  last_key = k;
-  
-  next_ui = ui_curr->on_event(ui_curr, event);
-  
-  if(next_ui && next_ui != ui_curr) {
-    if(ui_curr->on_event(ui_curr, UI_EVENT_CLOSE))
-      fatal("handle_ui: close event cannot set next_ui");
-    ui_curr->focus = 0;
-    ui_curr = next_ui;
-  }
+	// open UI if not opened yet
+	if(!ui_curr->focus) {
+		next_ui = ui_curr->on_event(ui_curr, UI_EVENT_OPEN);
+		ui_curr->focus = 1;
+		if(next_ui)
+			fatal("ui_handler: fast close");
+	}
+
+	// get joystick events
+	joyRead();
+	event = UI_EVENT_IDLE;
+	if(joyPressedButton())     event = UI_EVENT_SELECT;
+	else if(joyPressedUp())    event = UI_EVENT_PRESSED_UP;
+	else if(joyPressedDown())  event = UI_EVENT_PRESSED_DOWN;
+	else if(joyPressedLeft())  event = UI_EVENT_PRESSED_LEFT;
+	else if(joyPressedRight()) event = UI_EVENT_PRESSED_RIGHT;
+	else if(joyMoveUp())       event = UI_EVENT_UP;
+	else if(joyMoveDown())     event = UI_EVENT_DOWN;
+	else if(joyMoveLeft())     event = UI_EVENT_LEFT;
+	else if(joyMoveRight())    event = UI_EVENT_RIGHT;
+
+	// get keys
+	k = 0;
+	if(Serial.available() > 0) {
+		int c;
+		if((c = Serial.read()) == 27
+		&& (c = Serial.read()) == 91) { // escape char
+			k = Serial.read() | 0x1000;
+			switch(k) {
+			case 66 | 0x1000: event = last_key == k ? UI_EVENT_DOWN  : UI_EVENT_PRESSED_DOWN;  break;
+			case 65 | 0x1000: event = last_key == k ? UI_EVENT_UP    : UI_EVENT_PRESSED_UP;    break;
+			case 68 | 0x1000: event = last_key == k ? UI_EVENT_LEFT  : UI_EVENT_PRESSED_LEFT;  break;
+			case 67 | 0x1000: event = last_key == k ? UI_EVENT_RIGHT : UI_EVENT_PRESSED_RIGHT; break;
+			//default:
+			//Serial.print("escape => "); Serial.print(k & 0xff);
+			}
+		} else {
+			if(c == 13) {
+				event = UI_EVENT_SELECT;
+			}
+		}
+	}
+	last_key = k;
+
+	next_ui = ui_curr->on_event(ui_curr, event);
+
+	if(next_ui && next_ui != ui_curr) {
+		if(ui_curr->on_event(ui_curr, UI_EVENT_CLOSE))
+			fatal("handle_ui: close event cannot set next_ui");
+		ui_curr->focus = 0;
+		ui_curr = next_ui;
+	}
 }
 
 // HELLO SCREEN
-struct ui_hello_struct {
-  ui_screen base;
-  int       ticks_to_go;
-} ui_hello = { { (ui_screen *(*)(ui_screen *, int)) ui_hello_evh, 0 }, 20 };
-
-// GLOBAL OPTIONS SCREEN
-struct ui_config_global_struct {
-  ui_screen base;
-  int       current;
-} ui_config_global = { { (ui_screen *(*)(ui_screen *, int)) ui_config_global_evh, 0 }, 0 };
-
-// PWM SCREEN
-struct ui_pwm_struct {
-  ui_screen base;
-  int       current_pwm;
-} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
-
-// DCC SCREEN
-//struct ui_pwm_struct {
-//  ui_screen base;
-//  int       current_pwm;
-//} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
-
-void ui_hello_draw(void)
+void UIHello::draw(void)
 {
   char buffer[100];
 
@@ -177,15 +153,37 @@ void ui_hello_draw(void)
   }
 }
 
-struct ui_screen *ui_hello_evh(struct ui_hello_struct *ui, int event)
+void UIHello::do_open_event(void)
 {
-  if(event == UI_EVENT_OPEN)
-    ui_hello_draw();
-  if(event == UI_EVENT_CLOSE)
-    return NULL;
-    
-  return --ui->ticks_to_go > 0 ? NULL : (struct ui_screen *) &ui_config_global;
+	ticks_to_go = 20;
+	ui_hello_draw();
 }
+
+
+UIHello *UIHello::do_tick_event(uint8_t event)
+{
+	return --ui->ticks_to_go > 0
+		? NULL
+		: &ui_config_global;
+}
+
+// GLOBAL OPTIONS SCREEN
+struct ui_config_global_struct {
+	ui_screen base;
+	int       current;
+} ui_config_global = { { (ui_screen *(*)(ui_screen *, int)) ui_config_global_evh, 0 }, 0 };
+
+// PWM SCREEN
+struct ui_pwm_struct {
+	ui_screen base;
+	int       current_pwm;
+} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
+
+// DCC SCREEN
+//struct ui_pwm_struct {
+//  ui_screen base;
+//  int       current_pwm;
+//} ui_pwm = { { (ui_screen *(*)(ui_screen *, int)) ui_pwm_evh, 0 }, 0 };
 
 void ui_config_global_draw(struct ui_config_global_struct *ui, int cls)
 {

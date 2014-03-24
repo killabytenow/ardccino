@@ -27,6 +27,11 @@
 
 #ifdef JOY_ENABLED
 
+#ifdef SIMULATOR
+int sim_joystick_status;
+#  define analogRead(x) ((x) & sim_joystick_status)
+#endif
+
 Joystick::Joystick(void)
 {
 	joyStatusNow = 0;

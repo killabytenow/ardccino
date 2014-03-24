@@ -66,7 +66,7 @@ Booster boosters[] = {
 	Booster("booster#3",  10,  11,  12,  13,  14),
 //	Booster("service",    xx,  xx,  xx,  xx,  xx),
 };
-#define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
+#  define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
 #else
 extern Booster boosters;
 #endif
@@ -127,14 +127,14 @@ extern DccMngr dcc;
 #define CLI_ENABLED 1
 
 #ifdef CLI_ENABLED
-#include "cli.h"
-#define CLI_SERIAL_SPEED  115200
-#define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
-#ifdef __DECLARE_GLOBALS__
+#  include "cli.h"
+#  define CLI_SERIAL_SPEED  115200
+#  define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
+#  ifdef __DECLARE_GLOBALS__
 Cli cli = Cli();
-#else
+#  else
 extern Cli cli;
-#endif
+#  endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -147,20 +147,20 @@ extern Cli cli;
 #define ENABLE_SCREEN 1
 
 #ifdef ENABLE_SCREEN
-#ifdef __DECLARE_GLOBALS__
+#  ifdef __DECLARE_GLOBALS__
 
 // Elecfreaks TFT01-2.2SP 2.2 SPI 240 x 320 TFT LCD Module
-#define TFT_SCK       44
-#define TFT_SDI_MOSI  46
-#define TFT_DC        48
-#define TFT_RESET     50
-#define TFT_CS        52
+#    define TFT_SCK       44
+#    define TFT_SDI_MOSI  46
+#    define TFT_DC        48
+#    define TFT_RESET     50
+#    define TFT_CS        52
 //UTFT tft = UTFT(TFT01_22SP, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
 UTFT tft = UTFT(SSD1963_800, TFT_SDI_MOSI, TFT_SCK, TFT_CS, TFT_RESET, TFT_DC);
 
-#else
+#  else
 extern UTFT tft;
-#endif
+#  endif
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,14 +169,14 @@ extern UTFT tft;
 // Joystick configuration.
 //
 
-//#define JOY_ENABLED 1
+#define JOY_ENABLED 1
 
 #ifdef JOY_ENABLED
-#define JOY_PIN_AXIS_X    A0
-#define JOY_PIN_AXIS_Y    A1
-#define JOY_PIN_BUTTON    A2
-#define JOY_RANGE_AXIS_X  1023
-#define JOY_RANGE_AXIS_Y  1023
+#  define JOY_PIN_AXIS_X    A0
+#  define JOY_PIN_AXIS_Y    A1
+#  define JOY_PIN_BUTTON    A2
+#  define JOY_RANGE_AXIS_X  1023
+#  define JOY_RANGE_AXIS_Y  1023
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -187,16 +187,6 @@ extern UTFT tft;
 
 //#define HWGUI_ENABLE 1
 
-#ifndef JOY_ENABLED
-#define JOY_ENABLED_WARNING
-#undef HWGUI_ENABLE
-#endif
-
-#ifndef ENABLE_SCREEN
-#define ENABLE_SCREEN_WARNING
-#undef HWGUI_ENABLE
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////
 // DON'T TOUCH THE FOLLOWING CODE
 //
@@ -204,7 +194,27 @@ extern UTFT tft;
 //
 
 #ifndef SERVICE_TRACK
-#define SERVICE_TRACK -1
+#  define SERVICE_TRACK -1
+#endif
+
+#ifndef JOY_ENABLED
+#  define JOY_ENABLED_WARNING
+#  undef HWGUI_ENABLE
+#endif
+
+#ifndef ENABLE_SCREEN
+#  define ENABLE_SCREEN_WARNING
+#  undef HWGUI_ENABLE
+#endif
+
+#ifdef SIMULATOR
+#  undef JOY_PIN_AXIS_X
+#  undef JOY_PIN_AXIS_Y
+#  undef JOY_PIN_BUTTON
+#  define JOY_PIN_AXIS_X    0x1
+#  define JOY_PIN_AXIS_Y    0x2
+#  define JOY_PIN_BUTTON    0x4
+extern int sim_joystick_status;
 #endif
 
 #endif
