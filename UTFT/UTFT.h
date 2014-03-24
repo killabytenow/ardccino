@@ -247,11 +247,13 @@ class UTFT
 		void _convert_float(char *buf, double num, int width, byte prec);
 
 #ifdef SIMULATOR
-		int gtk_last_x, gtk_last_y;
-		int gtk_color;
-		int zoom;
+		int gtk_last_x,  gtk_last_y,  // keeps track of the last data byte sent
+		    gtk_area_x1, gtk_area_y1, // area that is being drawed
+		    gtk_area_x2, gtk_area_y2;
+
+		GdkPixbuf *lcd_buffer;
 		cairo_surface_t *surface;
-		GtkWidget *fixed;
+		GtkWidget *align;
 		GtkWidget *drawing_area;
 
 		GtkWidget *gtk_getLCDWidget(void);

@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 		g_print("Cannot accept a zoom factor smaller than 1");
 		exit(1);
 	} else {
-		tft.zoom = zoom;
+		//tft.zoom = zoom;
 	}
 
 	// print debug crap
@@ -305,15 +305,12 @@ int main(int argc, char *argv[])
 #endif
 
 	// here we go
-	//gtk_widget_show(tft.gtk_getLCDWidget());
 	gtk_widget_show_all(window);
 
 	/* Create new thread */
 	launch_thread();
 
-//tft.drawCircle(20, 20, 10);
 	gtk_main();
-	//while (gtk_main_iteration()) { ; }
 
 	return 0;
 }

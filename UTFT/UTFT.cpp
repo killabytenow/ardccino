@@ -84,10 +84,6 @@
 
 UTFT::UTFT()
 {
-#ifdef SIMULATOR
-	fixed = NULL;
-	zoom = 1;
-#endif
 }
 
 UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
@@ -285,15 +281,12 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 		pinMode(CS,OUTPUT);
 		pinMode(RST,OUTPUT);
 	}
-#else
-	fixed = NULL;
-	zoom = 1;
 #endif
 }
 
+#ifndef SIMULATOR
 void UTFT::LCD_Write_COM(char VL)  
 {   
-#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		cbi(P_RS, B_RS);
@@ -301,15 +294,10 @@ void UTFT::LCD_Write_COM(char VL)
 	}
 	else
 		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
-#else
-	g_print("LCD_Write_COM() executed. Aborting.");
-	abort();
-#endif
 }
 
 void UTFT::LCD_Write_DATA(char VH,char VL)
 {
-#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -320,15 +308,10 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 		LCD_Writ_Bus(0x01,VH,display_transfer_mode);
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
 	}
-#else
-	g_print("LCD_Write_DATA() executed. Aborting.");
-	abort();
-#endif
 }
 
 void UTFT::LCD_Write_DATA(char VL)
 {
-#ifndef SIMULATOR
 	if (display_transfer_mode!=1)
 	{
 		sbi(P_RS, B_RS);
@@ -336,10 +319,6 @@ void UTFT::LCD_Write_DATA(char VL)
 	}
 	else
 		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
-#else
-	g_print("LCD_Write_DATA() executed. Aborting.");
-	abort();
-#endif
 }
 
 void UTFT::LCD_Write_COM_DATA(char com1,int dat1)
@@ -347,6 +326,7 @@ void UTFT::LCD_Write_COM_DATA(char com1,int dat1)
      LCD_Write_COM(com1);
      LCD_Write_DATA(dat1>>8,dat1);
 }
+#endif
 
 void UTFT::InitLCD(byte orientation)
 {
@@ -445,13 +425,23 @@ void UTFT::InitLCD(byte orientation)
 
 void UTFT::setXY(word x1, word y1, word x2, word y2)
 {
-	if (orient==LANDSCAPE)
-	{
+#ifdef SIMULATOR
+	gtk_last_x = gtk_area_x1 = x1;
+	gtk_last_y = gtk_area_y1 = y1;
+	gtk_area_x2 = x2;
+	gtk_area_y2 = y2;
+	g_print(__FILE__ ":%s: area(%d, %d, %d, %d), last(%d, %d)\n",
+			__func__,
+			gtk_area_x1, gtk_area_y1,
+			gtk_area_x2, gtk_area_y2,
+			gtk_last_x, gtk_last_y);
+#else
+	if (orient==LANDSCAPE) {
 		swap(word, x1, y1);
-		swap(word, x2, y2)
+		swap(word, x2, y2);
 		y1=disp_y_size-y1;
 		y2=disp_y_size-y2;
-		swap(word, y1, y2)
+		swap(word, y1, y2);
 	}
 
 	switch(display_model)
@@ -523,6 +513,7 @@ void UTFT::setXY(word x1, word y1, word x2, word y2)
 	#include "tft_drivers/ili9341/s5p/setxy.h"
 #endif
 	}
+#endif
 }
 
 void UTFT::clrXY()
@@ -661,6 +652,7 @@ void UTFT::drawCircle(int x, int y, int radius)
 	int x1 = 0;
 	int y1 = radius;
  
+	g_print(__FILE__ ":%s: pos(%d, %d), radius(%d)\n", __func__, x, y, radius);
 	cbi(P_CS, B_CS);
 	setXY(x, y + radius, x, y + radius);
 	LCD_Write_DATA(fch,fcl);
@@ -1390,7 +1382,6 @@ void UTFT::setContrast(char c)
 	}
 	sbi(P_CS, B_CS);
 #else
-#warning "TODO: set contrast"
 #endif
 }
 

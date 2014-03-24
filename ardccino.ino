@@ -33,10 +33,10 @@ void setup(void)
 	cli.init();
 	off.enable();
 
-// init menu ui
-//ui_curr = (struct ui_screen *) &ui_hello;
-//current_ui_handler = uiHandler;
-//current_ui_handler = cliHandler;
+	// init menu ui
+	//ui_curr = (struct ui_screen *) &ui_hello;
+	//current_ui_handler = uiHandler;
+	//current_ui_handler = cliHandler;
 }
 
 void loop(void)
