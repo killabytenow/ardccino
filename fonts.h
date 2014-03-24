@@ -26,6 +26,8 @@
 #ifndef __FONTS_H__
 #define __FONTS_H__
 
+#include "config.h"
+
 extern uint8_t TinyFont[];
 extern uint8_t SmallFont[];
 extern uint8_t BigFont[];
