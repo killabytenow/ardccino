@@ -195,7 +195,7 @@ void UTFT::LCD_Write_COM(char VL)
 
 void UTFT::LCD_Write_DATA(char VH, char VL)
 {
-	int width, height, rowstride;
+	int rowstride;
 	guchar *pixels, *p;
 
 	g_print(__FILE__ ":%s: pixbuf(%d, %d) last(%d, %d)\n",
