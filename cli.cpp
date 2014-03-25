@@ -209,7 +209,7 @@ void Cli::booster_list(void)
 		ANSI_SGR_BOLD "id" ANSI_SGR_BOLD_OFF "\t"
 		ANSI_SGR_BOLD "enabled" ANSI_SGR_BOLD_OFF "\t"
 		ANSI_SGR_BOLD "name" ANSI_SGR_BOLD_OFF);
-	for(int bi = 0; bi < BoosterMngr::nboosters(); bi++) {
+	for(int bi = 0; bi < BoosterMngr::nboosters; bi++) {
 		b = BoosterMngr::booster(bi);
 		info("%d\t%s\t%s",
 			bi,
@@ -566,7 +566,8 @@ void Cli::input_read(void)
 ojete:
 		switch(c) {
 		case 13:
-			break;
+			if(Serial.available())
+				Serial.read();
 		case 10:
 			Serial.println();
 			input_reading = false;

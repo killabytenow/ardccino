@@ -27,16 +27,23 @@
 
 #define __DECLARE_GLOBALS__ 1
 #include "config.h"
+#include "hwgui.h"
 
 void setup(void)
 {
-	cli.init();
+	// install configured boosters
+	BoosterMngr::set_boosters(boosters, BOOSTERS_N);
+
+	// turn off all boosters
 	off.enable();
 
-	// init menu ui
-	//ui_curr = (struct ui_screen *) &ui_hello;
-	//current_ui_handler = uiHandler;
-	//current_ui_handler = cliHandler;
+	// enable interfaces
+#ifdef CLI_ENABLED
+	cli.init();
+#endif
+#ifdef HWGUI_ENABLED
+	UIScreen::init(ui_hello);
+#endif
 }
 
 void loop(void)
@@ -44,6 +51,12 @@ void loop(void)
 	BoosterMngr::refresh_current();
 #ifdef CLI_ENABLED
 	cli.input_read();
+#endif
+#ifdef HWGUI_ENABLED
+	UIScreen::handle();
+#ifdef SIMULATOR
+	utft.gtk_refresh();
+#endif
 #endif
   
 	delay(100);

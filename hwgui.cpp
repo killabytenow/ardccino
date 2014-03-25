@@ -40,15 +40,8 @@
 // UTFT
 ///////////////////////////////////////////////////////////////////////////////
 
-uint16_t tft_xsize;
-uint16_t tft_ysize;
-
-void utftSetup(void)
-{
-	tft.setFont(TinyFont);
-	tft_xsize = tft.getDisplayXSize();
-	tft_ysize = tft.getDisplayYSize();
-}
+uint16_t UIScreen::tft_xsize;
+uint16_t UIScreen::tft_ysize;
 
 ///////////////////////////////////////////////////////////////////////////////
 // CREATE SCREENS
@@ -69,28 +62,36 @@ UIScreen::UIScreen()
 	focus = false;
 }
 
+void UIScreen::init(UIScreen *start)
+{
+	tft.setFont(TinyFont);
+	tft_xsize = tft.getDisplayXSize();
+	tft_ysize = tft.getDisplayYSize();
+	current = start;
+}
+
 void UIScreen::handle(void)
 {
 	UIScreen *next_ui;
 
-	if(!focus) {
-		do_open_event();
-		focus = true;
+	if(!current->focus) {
+		current->do_open_event();
+		current->focus = true;
 	}
 
 	Joystick::read();
 	if((Joystick::now | Joystick::old)
-	&& (next_ui = do_joystick_event()) != NULL)
+	&& (next_ui = current->do_joystick_event()) != NULL)
 		goto go_next_ui;
 	
-	if((next_ui = do_tick_event()) != NULL)
+	if((next_ui = current->do_tick_event()) != NULL)
 		goto go_next_ui;
 
 	return;
 
 go_next_ui:
-	focus = false;
-	do_close_event();
+	current->focus = false;
+	current->do_close_event();
 	current = next_ui;
 }
 
@@ -104,7 +105,7 @@ void UIHello::draw(void)
 
 	cli.debug("drawing hello");
 
-	tft.clrScr();
+	tft.fillScr(VGA_BLUE);
 	tft.setFont(SmallFont);
 	tft.setColor(255, 255, 255);
 	tft.setBackColor(255, 0, 0);
@@ -154,15 +155,15 @@ void UIGlobalConfig::draw(void)
 	}
 
 	// draw first mode (usually OFF)
-	tft.fillScr(VGA_BLUE);
-	y1 = tft_ysize / 16;
-	y2 = tft_xsize * 5 / 16;
-	x1 = tft_xsize / 16;
-	x2 = tft_xsize * 15 / 32;
-	tft.fillRoundRect(x1, y1, x2, y2);
-	tft.setColor(VGA_GRAY);
-	tft.drawRoundRect(x1, y1, x2, y2);
-	tft.print((char *) "Off", (x2 + x1 - 3*8) >> 1, (y2 + y1 - 12) >> 1);
+	//tft.fillScr(VGA_BLUE);
+	//y1 = tft_ysize / 16;
+	//y2 = tft_xsize * 5 / 16;
+	//x1 = tft_xsize / 16;
+	//x2 = tft_xsize * 15 / 32;
+	//tft.fillRoundRect(x1, y1, x2, y2);
+	//tft.setColor(VGA_GRAY);
+	//tft.drawRoundRect(x1, y1, x2, y2);
+	//tft.print((char *) "Off", (x2 + x1 - 3*8) >> 1, (y2 + y1 - 12) >> 1);
 
 	//Serial.print(current == 0 ? ">> " : "   ");
 	//Serial.print("Signal mode\t<");
@@ -231,12 +232,12 @@ void UIPWM::draw(void)
 UIScreen *UIPWM::do_joystick_event(void)
 {
 	if(Joystick::move(JOY_LEFT)) {
-		if(c_opt >= pwm.nboosters())
+		if(c_opt >= pwm.nboosters)
 			return NULL;
 		pwm.accelerate(c_opt, -10);
 	} else
 	if(Joystick::move(JOY_RIGHT)) {
-		if(c_opt >= pwm.nboosters())
+		if(c_opt >= pwm.nboosters)
 			return NULL;
 		pwm.accelerate(c_opt, 10);
 	} else
@@ -246,12 +247,12 @@ UIScreen *UIPWM::do_joystick_event(void)
 		c_opt--;
 	} else
 	if(Joystick::pressed(JOY_DOWN)) {
-		if(c_opt >= pwm.nboosters())
+		if(c_opt >= pwm.nboosters)
 			return NULL;
 		c_opt++;
 	} else
 	if(Joystick::pressed(JOY_BUTTON)) {
-		if(c_opt < pwm.nboosters())
+		if(c_opt < pwm.nboosters)
 			pwm.stop(c_opt);
 		else
 			return &ui_global_config;
@@ -263,8 +264,8 @@ UIScreen *UIPWM::do_joystick_event(void)
 UIScreen *UIPWM::do_tick_event(void)
 {
 	bool redraw = false;
-	for(int i = 0; !redraw && i < pwm.nboosters(); i++)
-		redraw = pwm.booster(i)->curr_power != pwm.booster(i)->trgt_power;
+	for(int i = 0; !redraw && i < pwm.nboosters; i++)
+		redraw = pwm.boosters[i].curr_power != pwm.boosters[i].trgt_power;
 	refresh++;
 	if(redraw || refresh > 10)
 		draw();

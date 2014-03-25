@@ -89,8 +89,8 @@ void DccMngr::isr(struct dcc_buffer_struct *pool)
 	struct dcc_buffer_struct *cmsg;
 
 	/* invert signal */
-	for(int i = 0; i < _nboosters; i++)
-		digitalWrite(_boosters[i].pwmSignalPin, _boosters[i].enabled);
+	for(int i = 0; i < BoosterMngr::nboosters; i++)
+		digitalWrite(BoosterMngr::boosters[i].pwmSignalPin, BoosterMngr::boosters[i].enabled);
 	if((dccZero = !dccZero))
 		return;
 
@@ -139,15 +139,15 @@ void DccMngr::isr(struct dcc_buffer_struct *pool)
 }
 #endif
 
-DccMngr::DccMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
+DccMngr::DccMngr() : BoosterMngr()
 {
 	service_booster = -1;
 }
 
-DccMngr::DccMngr(Booster *b, uint8_t n, int8_t service_booster)
-	: BoosterMngr(b, n), service_booster(service_booster)
+DccMngr::DccMngr(int8_t service_booster)
+	: BoosterMngr(), service_booster(service_booster)
 {
-	if(service_booster >= n)
+	if(service_booster >= BoosterMngr::nboosters)
 		cli.fatal("service_booster id is above nboosters.");
 }
 
@@ -179,8 +179,8 @@ void DccMngr::init(void)
 #endif
 
 	// SET PWM OUTPUTS TO 1
-	for(int b = 0; b < _nboosters; b++)
-		digitalWrite(_boosters[b].pwmSignalPin, _boosters[b].enabled);
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, BoosterMngr::boosters[b].enabled);
 
 	//-------------------------------------------
 	// RESET DCC STATUS

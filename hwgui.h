@@ -34,6 +34,8 @@ class UIScreen {
 	static UIScreen *current;
 
 protected:
+	static uint16_t tft_xsize;
+	static uint16_t tft_ysize;
 	bool focus;
 	virtual void draw(void) = 0;
 	virtual void do_open_event(void) { draw(); };
@@ -43,7 +45,8 @@ protected:
 
 public:
 	UIScreen();
-	void handle(void);
+	static void handle(void);
+	static void init(UIScreen *start);
 };
 
 class UIHello : public UIScreen {
@@ -76,18 +79,9 @@ protected:
 	UIScreen *do_tick_event(void);
 };
 
-#define UI_EVENT_IDLE           0
-#define UI_EVENT_OPEN           1
-#define UI_EVENT_CLOSE          2
-#define UI_EVENT_LEFT           11
-#define UI_EVENT_RIGHT          12
-#define UI_EVENT_UP             13
-#define UI_EVENT_DOWN           14
-#define UI_EVENT_PRESSED_LEFT   15
-#define UI_EVENT_PRESSED_RIGHT  16
-#define UI_EVENT_PRESSED_UP     17
-#define UI_EVENT_PRESSED_DOWN   18
-#define UI_EVENT_SELECT         20
+extern UIHello ui_hello;
+extern UIGlobalConfig ui_global_config;
+extern UIPWM ui_pwm;
 
 #endif
 

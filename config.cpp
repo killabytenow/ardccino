@@ -26,6 +26,10 @@
 
 #include "config.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// EMIT WARNINGS AND ERRORS
+///////////////////////////////////////////////////////////////////////////////
+
 #ifdef JOY_ENABLED_WARNING
 #warning "Cannot enable hardware gui without an input method (enable joystick at least)"
 #endif
@@ -37,4 +41,12 @@
 #if (!defined(HWGUI_ENABLED) && !defined(CLI_ENABLED))
 #error "Is stupid to build a controller without control input methods - enable serial CLI at least"
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
+// DECLARE GLOBALS
+///////////////////////////////////////////////////////////////////////////////
+
+OffMngr off = OffMngr();
+PwmMngr pwm = PwmMngr();
+DccMngr dcc = DccMngr(SERVICE_TRACK);
 

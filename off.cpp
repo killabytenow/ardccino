@@ -26,21 +26,17 @@
 #include "config.h"
 #include "off.h"
 
-OffMngr::OffMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
-{
-}
-
 void OffMngr::init(void)
 {
 	cli.debug("Initializing OFF.");
 
-	for(int b = 0; b < _nboosters; b++) {
+	for(int b = 0; b < BoosterMngr::nboosters; b++) {
 		cli.debug("stoping booster %d (%d, %d)",
 				b,
-				_boosters[b].pwmSignalPin,
-				_boosters[b].dirSignalPin);
-		digitalWrite(_boosters[b].pwmSignalPin, LOW);
-		digitalWrite(_boosters[b].dirSignalPin, LOW);
+				BoosterMngr::boosters[b].pwmSignalPin,
+				BoosterMngr::boosters[b].dirSignalPin);
+		digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, LOW);
+		digitalWrite(BoosterMngr::boosters[b].dirSignalPin, LOW);
 	  }
 }
 

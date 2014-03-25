@@ -64,11 +64,8 @@ Booster boosters[] = {
 	Booster("booster#1",   3,   2,   4,   5,  14),
 	Booster("booster#2",   9,   6,   7,   8,  14),
 	Booster("booster#3",  10,  11,  12,  13,  14),
-//	Booster("service",    xx,  xx,  xx,  xx,  xx),
 };
 #  define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
-#else
-extern Booster boosters;
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -85,24 +82,6 @@ extern Booster boosters;
 ///////////////////////////////////////////////////////////////////////////////
 
 #define SERVICE_TRACK -1
-
-///////////////////////////////////////////////////////////////////////////////
-// CREATE BOOSTER MANAGERS
-//
-// Following code is usually OK (you need these three booster managers) and does
-// not need to be edited.
-///////////////////////////////////////////////////////////////////////////////
-
-#ifdef __DECLARE_GLOBALS__
-OffMngr off = OffMngr(boosters, BOOSTERS_N);
-PwmMngr pwm = PwmMngr(boosters, BOOSTERS_N);
-DccMngr dcc = DccMngr(boosters, BOOSTERS_N, -1);
-//DccMngr dcc(boosters, 2, 1);
-#else
-extern OffMngr off;
-extern PwmMngr pwm;
-extern DccMngr dcc;
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // SERIAL CLI INTERFACE
@@ -133,7 +112,6 @@ extern DccMngr dcc;
 #  ifdef __DECLARE_GLOBALS__
 Cli cli = Cli();
 #  else
-extern Cli cli;
 #  endif
 #endif
 
@@ -215,6 +193,14 @@ extern UTFT tft;
 #  define JOY_PIN_AXIS_Y    0x2
 #  define JOY_PIN_BUTTON    0x4
 extern int sim_joystick_status;
+#endif
+
+// Export global symbols
+extern OffMngr off;
+extern PwmMngr pwm;
+extern DccMngr dcc;
+#ifdef CLI_ENABLED
+extern Cli cli;
 #endif
 
 #endif

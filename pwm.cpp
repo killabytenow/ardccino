@@ -27,10 +27,6 @@
 #include "pwm.h"
 #include "interrupts.h"
 
-PwmMngr::PwmMngr(Booster *b, uint8_t n) : BoosterMngr(b, n)
-{
-}
-
 void PwmMngr::init(void)
 {
 	uint8_t timers = 0;
@@ -38,8 +34,8 @@ void PwmMngr::init(void)
 	cli.debug("Initializing PWM.");
 
 	// discover which timers must be configured
-	for(int b = 0; b < _nboosters; b++) {
-		switch(_boosters[b].pwmSignalPin) {
+	for(int b = 0; b < BoosterMngr::nboosters; b++) {
+		switch(BoosterMngr::boosters[b].pwmSignalPin) {
 		case 9:
 		case 10:
 			timers |= (1 << 1);
@@ -80,8 +76,8 @@ void PwmMngr::init(void)
 	}
 
 	// CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
-	for(int b = 0; b < _nboosters; b++) {
-		switch(_boosters[b].pwmSignalPin) {
+	for(int b = 0; b < BoosterMngr::nboosters; b++) {
+		switch(BoosterMngr::boosters[b].pwmSignalPin) {
 		case 9:  TCCR1A |= 0b10000000; break; // Clear OC1A on cmp match
 		case 10: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
 		case 11: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
@@ -93,8 +89,8 @@ void PwmMngr::init(void)
 
 	//-------------------------------------------
 	// RESET PWM STATUS
-	for(int b = 0; b < _nboosters; b++)
-		_boosters[b].reset();
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		BoosterMngr::boosters[b].reset();
 
 	enable_interrupts();
 }
@@ -172,8 +168,8 @@ void PwmMngr::booster_refresh(Booster *b)
 
 void PwmMngr::refresh(void)
 {
-	for(int b = 0; b < _nboosters; b++)
-		booster_refresh(_boosters + b);
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		booster_refresh(BoosterMngr::boosters + b);
 }
 
 void PwmMngr::accelerate(Booster *b, int v)
@@ -189,19 +185,19 @@ void PwmMngr::accelerate(Booster *b, int v)
 
 void PwmMngr::accelerate(int b, int v)
 {
-	if(b < 0 || b > _nboosters)
+	if(b < 0 || b > BoosterMngr::nboosters)
 		cli.fatal("pwmAccelerate: booster out of bounds.");
 
-	accelerate(_boosters + b, v);
+	accelerate(BoosterMngr::boosters + b, v);
 }
 
 void PwmMngr::speed(int b, int s)
 {
-	if(b < 0 || b > _nboosters)
+	if(b < 0 || b > BoosterMngr::nboosters)
 		cli.fatal("pwmSpeed: pwm booster out of bounds.");
 	if(s < -255 || s > 255)
 		cli.fatal("pwmSpeed: speed out of bounds.");
-	_boosters[b].trgt_power = s;
+	BoosterMngr::boosters[b].trgt_power = s;
 }
 
 void PwmMngr::stop(int b)
@@ -211,9 +207,9 @@ void PwmMngr::stop(int b)
 
 void PwmMngr::switch_dir(int b)
 {
-  if(b < 0 || b > _nboosters)
+  if(b < 0 || b > BoosterMngr::nboosters)
     cli.fatal("switch_dir: pwm out of bounds.");
     
-  _boosters[b].trgt_power = 0 - _boosters[b].trgt_power;
+  BoosterMngr::boosters[b].trgt_power = 0 - BoosterMngr::boosters[b].trgt_power;
 }
 

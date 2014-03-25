@@ -27,11 +27,8 @@
 #include "booster_mngr.h"
 
 BoosterMngr *BoosterMngr::current = NULL;
-
-BoosterMngr::BoosterMngr(Booster *b, uint8_t n)
-	: _boosters(b), _nboosters(n)
-{
-}
+Booster     *BoosterMngr::boosters = NULL;
+int          BoosterMngr::nboosters = 0;
 
 BoosterMngr *BoosterMngr::enable(void)
 {
@@ -56,13 +53,14 @@ void BoosterMngr::refresh_current(void)
 
 Booster *BoosterMngr::booster(uint8_t booster)
 {
-	if(current->booster < 0 || booster > current->_nboosters)
+	if(booster < 0 || booster > BoosterMngr::nboosters)
 		cli.fatal("Booster #%d out of bounds", booster);
-	return current->_boosters + booster;
+	return BoosterMngr::boosters + booster;
 }
 
-uint8_t BoosterMngr::nboosters(void)
+void BoosterMngr::set_boosters(Booster *ba, int n)
 {
-	return current->_boosters ? current->_nboosters : 0;
+	BoosterMngr::boosters = ba;
+	BoosterMngr::nboosters = n;
 }
 
