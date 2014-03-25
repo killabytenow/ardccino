@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#ifdef HWGUI_ENABLE
+#ifdef HWGUI_ENABLED
 
 class UIScreen {
 	static UIScreen *current;

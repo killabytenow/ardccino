@@ -30,7 +30,7 @@
 #include "fonts.h"
 #include "joystick.h"
 
-#ifdef HWGUI_ENABLE
+#ifdef HWGUI_ENABLED
 
 // following files are generated with 'gen_code.sh' script using the contents
 // of 'banner.txt' file.
@@ -48,7 +48,6 @@ void utftSetup(void)
 	tft.setFont(TinyFont);
 	tft_xsize = tft.getDisplayXSize();
 	tft_ysize = tft.getDisplayYSize();
-	Joystick::init();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -62,6 +61,8 @@ UIPWM          ui_pwm           = UIPWM();
 ///////////////////////////////////////////////////////////////////////////////
 // ABSTRACT INTERFACE SCREEN
 ///////////////////////////////////////////////////////////////////////////////
+
+UIScreen *UIScreen::current = NULL;
 
 UIScreen::UIScreen()
 {

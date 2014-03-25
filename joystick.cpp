@@ -32,42 +32,39 @@ int sim_joystick_status;
 #  define analogRead(x) ((x) & sim_joystick_status)
 #endif
 
-void Joystick::init(void)
-{
-	now = 0;
-	old = 0;
-}
+uint8_t Joystick::now = 0;
+uint8_t Joystick::old = 0;
 
 void Joystick::read(void)
 {
 	int v;
 
 	// reset joystick status
-	old = now;
-	now = 0;
+	old = Joystick::now;
+	Joystick::now = 0;
 
 	// update X axis
 	v = analogRead(JOY_PIN_AXIS_X);
-	if     (v < (JOY_RANGE_AXIS_X >> 2))                           now |= JOY_LEFT;
-	else if(v > (JOY_RANGE_AXIS_X >> 1) + (JOY_RANGE_AXIS_X >> 2)) now |= JOY_RIGHT;
+	if     (v < (JOY_RANGE_AXIS_X >> 2))                           Joystick::now |= JOY_LEFT;
+	else if(v > (JOY_RANGE_AXIS_X >> 1) + (JOY_RANGE_AXIS_X >> 2)) Joystick::now |= JOY_RIGHT;
 
 	// update Y axis
 	v = analogRead(JOY_PIN_AXIS_Y);
-	if     (v < (JOY_RANGE_AXIS_Y >> 2))                           now |= JOY_UP;
-	else if(v > (JOY_RANGE_AXIS_Y >> 1) + (JOY_RANGE_AXIS_Y >> 2)) now |= JOY_DOWN;
+	if     (v < (JOY_RANGE_AXIS_Y >> 2))                           Joystick::now |= JOY_UP;
+	else if(v > (JOY_RANGE_AXIS_Y >> 1) + (JOY_RANGE_AXIS_Y >> 2)) Joystick::now |= JOY_DOWN;
 
 	// update button
-	if(analogRead(JOY_PIN_BUTTON) == 0) now |= JOY_BUTTON;
+	if(analogRead(JOY_PIN_BUTTON) == 0) Joystick::now |= JOY_BUTTON;
 }
 
 bool Joystick::move(uint8_t flag)
 {
-	return (old & now & flag) == flag;
+	return (old & Joystick::now & flag) == flag;
 }
 
 bool Joystick::pressed(uint8_t flag)
 {
-	return (~old & now & flag) == flag;
+	return (~old & Joystick::now & flag) == flag;
 }
 
 void Joystick::print()

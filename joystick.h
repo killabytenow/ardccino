@@ -41,12 +41,15 @@ class Joystick {
 		static uint8_t now;
 		static uint8_t old;
 
-		static void init(void);
 		static void read(void);
 		static bool move(uint8_t flag);
 		static bool pressed(uint8_t flag);
 		static void print();
 };
+
+#ifdef SIMULATOR
+extern int sim_joystick_status;
+#endif
 
 #endif
 

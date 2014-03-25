@@ -185,7 +185,7 @@ extern UTFT tft;
 // Hardware GUI configuration
 //
 
-//#define HWGUI_ENABLE 1
+//#define HWGUI_ENABLED 1
 
 ///////////////////////////////////////////////////////////////////////////////
 // DON'T TOUCH THE FOLLOWING CODE

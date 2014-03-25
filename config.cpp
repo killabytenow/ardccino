@@ -34,7 +34,7 @@
 #warning "Cannot enable hardware gui without a screen or video output"
 #endif
 
-#if (!defined(HWGUI_ENABLE) && !defined(CLI_ENABLED))
+#if (!defined(HWGUI_ENABLED) && !defined(CLI_ENABLED))
 #error "Is stupid to build a controller without control input methods - enable serial CLI at least"
 #endif
 
