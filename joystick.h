@@ -37,16 +37,15 @@
 #define JOY_BUTTON 0x10
 
 class Joystick {
-	private:
-		uint8_t joyStatusNow;
-		uint8_t joyStatusOld;
-		
 	public:
-		Joystick(void);
-		void read(void);
-		bool move(uint8_t flag);
-		bool pressed(uint8_t flag);
-		void print();
+		static uint8_t now;
+		static uint8_t old;
+
+		static void init(void);
+		static void read(void);
+		static bool move(uint8_t flag);
+		static bool pressed(uint8_t flag);
+		static void print();
 };
 
 #endif

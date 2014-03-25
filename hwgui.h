@@ -33,25 +33,48 @@
 class UIScreen {
 	static UIScreen *current;
 
-private:
-	bool focus;
-
 protected:
-	virtual UIScreen *on_event(uint8_t event) = 0;
+	bool focus;
 	virtual void draw(void) = 0;
 	virtual void do_open_event(void) { draw(); };
 	virtual void do_close_event(void) { };
+	virtual UIScreen *do_joystick_event(void) { return NULL; };
 	virtual UIScreen *do_tick_event(void) { return NULL; };
 
 public:
-	static void handle(void);
-	void send_event(uint8_t event);
+	UIScreen();
+	void handle(void);
 };
 
-class UIHello : UIScreen {
+class UIHello : public UIScreen {
 private:
 	int       ticks_to_go;
-}
+
+protected:
+	void draw(void);
+	void do_open_event(void);
+	UIScreen *do_tick_event(void);
+};
+
+class UIGlobalConfig : public UIScreen {
+private:
+	int c_opt;
+
+protected:
+	void draw(void);
+	UIScreen *do_joystick_event(void);
+};
+
+class UIPWM : public UIScreen {
+private:
+	int c_opt;
+	int refresh;
+
+protected:
+	void draw(void);
+	UIScreen *do_joystick_event(void);
+	UIScreen *do_tick_event(void);
+};
 
 #define UI_EVENT_IDLE           0
 #define UI_EVENT_OPEN           1
