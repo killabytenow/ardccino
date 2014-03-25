@@ -35,10 +35,12 @@ BoosterMngr::BoosterMngr(Booster *b, uint8_t n)
 
 BoosterMngr *BoosterMngr::enable(void)
 {
+	if(BoosterMngr::current == this)
+		return this;
 	if(BoosterMngr::current)
 		BoosterMngr::current->fini();
 	BoosterMngr::current = this;
-	this->init();
+	init();
 	return this;
 }
 
