@@ -1,11 +1,22 @@
+/*****************************************************************************
+ * tinyfont.h
+ *
+ * A tiny font.
+ *
+ * ---------------------------------------------------------------------------
+ * ardccino - Arduino dual PWM/DCC controller
+ *****************************************************************************/
+
 #include "config.h"
+
+#ifdef HWGUI_ENABLED
 
 // TinyFont.c 
 // Font Size	: 8x8
 // Memory usage	: 764 bytes
 // # characters	: 95
  
-const uint8_t TinyFont[764] PROGMEM={
+uint8_t TinyFont[764] PROGMEM={
 0x08,0x08,0x20,0x5F,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // <Space>
 0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00, // !
@@ -103,3 +114,5 @@ const uint8_t TinyFont[764] PROGMEM={
 0x70,0x18,0x18,0x0E,0x18,0x18,0x70,0x00, // }
 0x76,0xDC,0x00,0x00,0x00,0x00,0x00,0x00, // ~
 };
+
+#endif
