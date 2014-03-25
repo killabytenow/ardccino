@@ -40,9 +40,10 @@ void setup(void)
 	// enable interfaces
 #ifdef CLI_ENABLED
 	cli.init();
+	cli.info("ardccino v1.0 ready");
 #endif
 #ifdef HWGUI_ENABLED
-	UIScreen::init(ui_hello);
+	UIScreen::init(&ui_hello);
 #endif
 }
 
@@ -55,7 +56,7 @@ void loop(void)
 #ifdef HWGUI_ENABLED
 	UIScreen::handle();
 #ifdef SIMULATOR
-	utft.gtk_refresh();
+	tft.gtk_refresh();
 #endif
 #endif
   
