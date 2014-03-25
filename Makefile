@@ -74,6 +74,12 @@ depends :
 reset :
 	$(MAKE) -f Real.mk reset
 
+upload :
+	$(MAKE) -f Real.mk upload
+
+do_upload :
+	$(MAKE) -f Real.mk do_upload
+
 raw_upload :
 	$(MAKE) -f Real.mk raw_upload
 
