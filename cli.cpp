@@ -129,6 +129,14 @@ void Cli::info(const char *frmt, ...)
 {
 	va_list args;
 	va_start(args, frmt);
+	_msg("! ", frmt, args);
+	va_end(args);
+}
+
+void Cli::notice(const char *frmt, ...)
+{
+	va_list args;
+	va_start(args, frmt);
 	_msg(NULL, frmt, args);
 	va_end(args);
 }

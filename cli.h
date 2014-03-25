@@ -72,6 +72,7 @@ class Cli {
 		void fatal(const char *frmt, ...);
 		void debug(const char *frmt, ...);
 		void info(const char *frmt, ...);
+		void notice(const char *frmt, ...);
 		void error(const char *frmt, ...);
 };
 
