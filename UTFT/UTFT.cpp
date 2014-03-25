@@ -426,15 +426,15 @@ void UTFT::InitLCD(byte orientation)
 void UTFT::setXY(word x1, word y1, word x2, word y2)
 {
 #ifdef SIMULATOR
-	gtk_last_x = gtk_area_x1 = x1;
+	gtk_area_x1 = x1;
 	gtk_last_y = gtk_area_y1 = y1;
-	gtk_area_x2 = x2;
+	gtk_last_x = gtk_area_x2 = x2;
 	gtk_area_y2 = y2;
-	g_print(__FILE__ ":%s: area(%d, %d, %d, %d), last(%d, %d)\n",
-			__func__,
-			gtk_area_x1, gtk_area_y1,
-			gtk_area_x2, gtk_area_y2,
-			gtk_last_x, gtk_last_y);
+	//g_print(__FILE__ ":%s: area(%d, %d, %d, %d), last(%d, %d)\n",
+	//		__func__,
+	//		gtk_area_x1, gtk_area_y1,
+	//		gtk_area_x2, gtk_area_y2,
+	//		gtk_last_x, gtk_last_y);
 #else
 	if (orient==LANDSCAPE) {
 		swap(word, x1, y1);
@@ -652,7 +652,9 @@ void UTFT::drawCircle(int x, int y, int radius)
 	int x1 = 0;
 	int y1 = radius;
  
+#ifdef SIMULATOR
 	g_print(__FILE__ ":%s: pos(%d, %d), radius(%d)\n", __func__, x, y, radius);
+#endif
 	cbi(P_CS, B_CS);
 	setXY(x, y + radius, x, y + radius);
 	LCD_Write_DATA(fch,fcl);
@@ -1089,6 +1091,7 @@ void UTFT::print(char *st, int x, int y, int deg)
 		x=((disp_y_size+1)-(stl*cfont.x_size))/2;
 	}
 
+	//g_print(__FILE__ ":%s: st='%s' @(%d,%d) /%d\n", __func__, st, x, y, deg);
 	for (i=0; i<stl; i++)
 		if (deg==0)
 			printChar(*st++, x + (i*(cfont.x_size)), y);

@@ -6,10 +6,11 @@
 				     (((unsigned) (ch & 0x07)) << 5)            \
 				   | (((unsigned) (cl & 0xe0)) >> 3))) / 255.0, \
 			 ((double) (((unsigned) (cl)) & 0x1f)) / 255.0
-#define COLOR_W_R(ch, cl)	(((unsigned char) ch) & 0xf8)
-#define COLOR_W_G(ch, cl)	(((((unsigned char) ch) & 0x07) << 5) \
-				| ((((unsigned char) cl) & 0xe0) >> 3))
-#define COLOR_W_B(ch, cl)	(((unsigned char) cl) & 0x1f)
+#define COLOR_W_R(ch, cl)	((((unsigned char) ch) & 0xf8) | 0x07)
+#define COLOR_W_G(ch, cl)	( (((unsigned char) ch & 0x07) << 5) \
+				| (((unsigned char) cl & 0xe0) >> 3) \
+				| 0x3)
+#define COLOR_W_B(ch, cl)	((((unsigned char) cl & 0x1f) << 3) | 0x7)
 
 static gboolean do_configure_event(
        GtkWidget         *widget,
@@ -29,9 +30,6 @@ static gboolean do_configure_event(
 			gtk_widget_get_allocated_width(widget),
 			gtk_widget_get_allocated_height(widget));
 	
-	/* Initialize the surface to white */
-	utft->gtk_clear_surface();
-
 	g_print(__FILE__ ":%s: out\n", __func__);
 	return TRUE;
 }
@@ -43,15 +41,12 @@ static gboolean do_draw_event(
 {
 	UTFT *utft = (UTFT *) data;
 
-	g_print(__FILE__ ":%s: received\n", __func__);
 	if(utft->lcd_buffer == NULL)
 		return FALSE;
 
 	// copy lcd buffer
 	gdk_cairo_set_source_pixbuf(cr, utft->lcd_buffer, 0, 0);
 	cairo_paint(cr);
-
-	g_print(__FILE__ ":%s: out\n", __func__);
 
 	return TRUE;
 }
@@ -87,8 +82,6 @@ static gboolean button_press_event_cb(
 	}
 	if(event->button == 1) {
 		utft->drawCircle(x, y, 10);
-	} else if (event->button == 3) {
-		utft->gtk_clear_surface();
 	}
 	gtk_widget_queue_draw(widget);
 
@@ -112,6 +105,7 @@ void UTFT::_hw_special_init()
 	gtk_area_x1 = gtk_area_x2 = 0;
 	gtk_area_y1 = gtk_area_y2 = 0;
 	surface = NULL;
+	lcd_buffer = NULL;
 
 	// create GTK surface and assign event handlers
 	drawing_area = gtk_drawing_area_new();
@@ -156,18 +150,15 @@ GtkWidget *UTFT::gtk_getLCDWidget(void)
 	return align;
 }
 
-void UTFT::gtk_clear_surface(void)
+void UTFT::gtk_refresh(void)
 {
-	cairo_t *cr;
-
-	cr = cairo_create(surface);
-
-	cairo_set_source_rgb(cr, 1, 1, 1);
-	cairo_paint(cr);
-
-	cairo_destroy(cr);
-
-	gtk_widget_queue_draw_area(drawing_area, 0, 0, disp_x_size + 1, disp_y_size + 1);
+	if(drawing_area)
+		gtk_widget_queue_draw(drawing_area);
+	//gtk_widget_queue_draw_area(
+	//	drawing_area,
+	//	0, 0,
+	//	gdk_pixbuf_get_width(lcd_buffer),
+	//	gdk_pixbuf_get_height(lcd_buffer));
 }
 
 void UTFT::LCD_Write_COM(char VL)  
@@ -198,11 +189,11 @@ void UTFT::LCD_Write_DATA(char VH, char VL)
 	int rowstride;
 	guchar *pixels, *p;
 
-	g_print(__FILE__ ":%s: pixbuf(%d, %d) last(%d, %d)\n",
-			__func__,
-			gdk_pixbuf_get_width(lcd_buffer),
-			gdk_pixbuf_get_height(lcd_buffer),
-			gtk_last_x, gtk_last_y);
+	//g_print(__FILE__ ":%s: pixbuf(%d, %d) last(%d, %d)\n",
+	//		__func__,
+	//		gdk_pixbuf_get_width(lcd_buffer),
+	//		gdk_pixbuf_get_height(lcd_buffer),
+	//		gtk_last_x, gtk_last_y);
 
 	g_assert(gdk_pixbuf_get_n_channels(lcd_buffer) == 3);
 	g_assert(gtk_area_x1 <= gtk_last_x && gtk_last_x <= gtk_area_x2
@@ -219,13 +210,13 @@ void UTFT::LCD_Write_DATA(char VH, char VL)
 	p[1] = COLOR_W_G(VH, VL);
 	p[2] = COLOR_W_B(VH, VL);
 
-	if(++gtk_last_x > gtk_area_x2) {
-		gtk_last_x = gtk_area_x1;
+	if(--gtk_last_x < gtk_area_x1) {
+		gtk_last_x = gtk_area_x2;
 		gtk_last_y++;
 	}
 
 	// Now invalidate the affected region of the drawing area
-	gtk_widget_queue_draw_area(drawing_area, gtk_last_x, gtk_last_y, 1, 1);
+	//gtk_widget_queue_draw_area(drawing_area, gtk_last_x, gtk_last_y, 1, 1);
 }
 
 void UTFT::LCD_Write_DATA(char VL)
@@ -236,8 +227,23 @@ void UTFT::LCD_Write_DATA(char VL)
 
 void UTFT::LCD_Writ_Bus(char VH,char VL, byte mode)
 {   
-	g_print(__FILE__ ":%s: Aborting!\n", __func__);
-	abort();
+	static bool send = false;
+	static char previous;
+	switch(mode) {
+	case 1:
+		if(send)
+			LCD_Write_DATA(previous, VL);
+		else
+			previous = VL;
+		send = !send;
+		break;
+	case LATCHED_16:
+		LCD_Write_DATA(VH, VL);
+		break;
+	default:
+		g_print(__FILE__ ":%s: Bad mode %d. Aborting!\n", __func__, mode);
+		abort();
+	}
 }
 
 void UTFT::_set_direction_registers(byte mode)
@@ -272,12 +278,12 @@ void UTFT::_fast_fill_16(int ch, int cl, long pix)
 	}
 		
 	/* Now invalidate the affected region of the drawing area. */
-	gtk_widget_queue_draw_area(
-		drawing_area,
-		gtk_area_x1,
-		gtk_area_y1,
-		gtk_area_x2 - gtk_area_x1 + 1,
-		gtk_area_y2 - gtk_area_y1 + 1);
+	//gtk_widget_queue_draw_area(
+	//	drawing_area,
+	//	gtk_area_x1,
+	//	gtk_area_y1,
+	//	gtk_area_x2 - gtk_area_x1 + 1,
+	//	gtk_area_y2 - gtk_area_y1 + 1);
 }
 
 void UTFT::_fast_fill_8(int ch, long pix)
@@ -293,3 +299,4 @@ void UTFT::_convert_float(char *buf, double num, int width, byte prec)
 	sprintf(format, "%%%i.%if", width, prec);
 	sprintf(buf, format, num);
 }
+

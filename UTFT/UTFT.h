@@ -257,8 +257,7 @@ class UTFT
 		GtkWidget *drawing_area;
 
 		GtkWidget *gtk_getLCDWidget(void);
-		void gtk_clear_surface(void);
-		void __set_pixel(void);
+		void gtk_refresh(void);
 #endif
 };
 
