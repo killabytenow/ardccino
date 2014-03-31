@@ -149,7 +149,7 @@ void UIGlobalConfig::draw(void)
 	if(!focus) {
 		tft.fillScr(VGA_NAVY);
 		tft.setColor(VGA_MAROON);
-		tft.drawRect(0, 0, tft_xsize, 12);
+		//tft.drawRect(0, 0, tft_xsize, 12);
 		tft.setColor(VGA_WHITE);
 		tft.print((char *) "Select working mode", CENTER, 0);
 	}
