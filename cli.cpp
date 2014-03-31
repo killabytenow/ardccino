@@ -267,18 +267,9 @@ void Cli::booster_status(Booster *b)
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
-bool Cli::parse_integer(char *token, uint16_t *v)
+bool Cli::parse_unsigned(char *token, uint16_t *v)
 {
-	int n, neg;
-	int type;
-
-	// check negative
-	if(*token == '-') {
-		neg = -1;
-		token++;
-	} else {
-		neg = 1;
-	}
+	uint16_t n, type;
 
 	// identify number
 	if(strlen(token) > 2
@@ -328,11 +319,31 @@ bool Cli::parse_integer(char *token, uint16_t *v)
 	default:
 		fatal("unknown number type");
 	}
-	if(v) *v = n * neg;
+
+	if(v) *v = n;
 	return true;
 }
 
-int Cli::parse_token(char *token, uint16_t *v)
+bool Cli::parse_signed(char *token, int16_t *v)
+{
+	int neg;
+
+	// check negative
+	if(*token == '-') {
+		neg = -1;
+		token++;
+	} else {
+		neg = 1;
+	}
+
+	if(!parse_unsigned(token, (uint16_t *) v))
+		return false;
+
+	if(v) *v *= neg;
+	return true;
+}
+
+int Cli::parse_token(char *token)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
 	unsigned l = strlen(token);
@@ -343,20 +354,33 @@ int Cli::parse_token(char *token, uint16_t *v)
 		&& !strncasecmp(token, buffer, strlen(token)))
 			return i;
 	}
-	if(v && parse_integer(token, v))
-		return CLI_TOKEN_INTEGER;
-
 	return -1;
 }
 
-int Cli::parse_token(char *token)
+int Cli::parse_token(char *token, uint16_t *v)
 {
-	return parse_token(token, NULL);
+	int t;
+	if((t = parse_token(token)) >= 0)
+		return t;
+	if(parse_unsigned(token, v))
+		return CLI_TOKEN_UINT;
+	return -1;
+}
+
+int Cli::parse_token(char *token, int16_t *v)
+{
+	int t;
+	if((t = parse_token(token)) >= 0)
+		return t;
+	if(parse_signed(token, v))
+		return CLI_TOKEN_INT;
+	return -1;
 }
 
 int Cli::execute_booster(char **token, char ntokens)
 {
-	uint16_t booster, a;
+	uint16_t booster, ui;
+	int16_t si;
 	int t;
 
 	// here we need at least 2 tokens
@@ -371,7 +395,7 @@ int Cli::execute_booster(char **token, char ntokens)
 	}
 
 	// COMMAND: booster <n> ***
-	if(t != CLI_TOKEN_INTEGER)
+	if(t != CLI_TOKEN_UINT)
 		return CLI_ERR_BAD_SYNTAX;
 	if(BoosterMngr::booster(booster) == NULL)
 		return CLI_ERR_BAD_BOOSTER;
@@ -388,19 +412,19 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> power <v>
 	case CLI_TOKEN_POWER:
 		CLI_TOKEN_EXPECTED(4);
-		switch(parse_token(token[3], &a)) {
+		switch(parse_token(token[3], &si)) {
 		case CLI_TOKEN_ON:
 			BoosterMngr::booster(booster)->on();
 			break;
 		case CLI_TOKEN_OFF:
 			BoosterMngr::booster(booster)->off();
 			break;
-		case CLI_TOKEN_INTEGER:
-			if(a < -255 || a > 255)
+		case CLI_TOKEN_INT:
+			if(si < -255 || si > 255)
 				return CLI_ERR_BAD_SYNTAX;
 			if(!pwm.enabled())
 				return CLI_ERR_BAD_MODE;
-			pwm.speed(booster, a);
+			pwm.speed(booster, si);
 			break;
 		default:
 			return CLI_ERR_BAD_SYNTAX;
@@ -431,36 +455,36 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> acceleration [<a>]
 	case CLI_TOKEN_ACCELERATION:
 		CLI_TOKEN_EXPECTED(4);
-		if(parse_token(token[3], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[3], &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		BoosterMngr::booster(booster)->set_inc_accel(a);
+		BoosterMngr::booster(booster)->set_inc_accel(ui);
 		break;
 	// COMMAND: booster <n> minimum power [<v>]
 	case CLI_TOKEN_MINIMUM:
 		CLI_TOKEN_EXPECTED(5);
 		if(parse_token(token[3]) != CLI_TOKEN_POWER)
 			return CLI_ERR_BAD_SYNTAX;
-		if(parse_token(token[4], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[4], &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		BoosterMngr::booster(booster)->set_min_power(a);
+		BoosterMngr::booster(booster)->set_min_power(ui);
 		break;
 	// COMMAND: booster <n> maximum (acceleration|power) [<a>]
 	case CLI_TOKEN_MAXIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(parse_token(token[4], &a) != CLI_TOKEN_INTEGER)
+		if(parse_token(token[4], &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
 		switch(parse_token(token[3])) {
 		case CLI_TOKEN_ACCELERATION:
-			BoosterMngr::booster(booster)->set_max_accel(a);
+			BoosterMngr::booster(booster)->set_max_accel(ui);
 			break;
 		case CLI_TOKEN_POWER:
-			BoosterMngr::booster(booster)->set_max_power(a);
+			BoosterMngr::booster(booster)->set_max_power(ui);
 			break;
 		default:
 			return CLI_ERR_BAD_SYNTAX;
@@ -542,7 +566,7 @@ speed:
 
 	if(ntokens < 1)
 		return CLI_ERR_NEED_MORE_PARAMS;
-	if(parse_token(*token, &speed) != CLI_TOKEN_INTEGER)
+	if(parse_token(*token, (int16_t *) &speed) != CLI_TOKEN_INT)
 		return CLI_ERR_BAD_SYNTAX;
 
 	switch(st) {
@@ -589,7 +613,7 @@ int Cli::execute_dcc(char **token, char ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
 	// broadcast or directed message?
-	if(parse_integer(*token, &address)) {
+	if(parse_unsigned(*token, &address)) {
 		token++;
 		ntokens--;
 		if(address < 0)
@@ -638,7 +662,7 @@ int Cli::execute_dcc(char **token, char ntokens)
 int Cli::execute(char **token, char ntokens)
 {
 	SIM_DBG("execute token[0]='%s'", token[0]);
-	switch(parse_token(token[0], NULL)) {
+	switch(parse_token(token[0])) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
 		if(ntokens > 1) return CLI_ERR_TOO_MANY_PARAMS;

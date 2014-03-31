@@ -57,9 +57,11 @@ class Cli {
 		void input_reset(void);
 
 		// parsing and execution
-		bool parse_integer(char *token, uint16_t *i);
-		int parse_token(char *token, uint16_t *i);
+		bool parse_unsigned(char *token, uint16_t *ui);
+		bool parse_signed(char *token, int16_t *si);
 		int parse_token(char *token);
+		int parse_token(char *token, uint16_t *ui);
+		int parse_token(char *token, int16_t *si);
 		int execute_booster(char **token, char ntokens);
 		int execute_dcc(char **token, char ntokens);
 		int execute_dcc_speed(char **token, char ntokens, bool service_track, uint16_t address);
