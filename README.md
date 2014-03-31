@@ -146,37 +146,42 @@ DCC COMMANDS
 ------------
 
 *NOTES*:
-  (1) If DCC device address is preceded by the '!' operator, the resulting command
-  or action is performed on the service track.
+  1. If DCC device address is preceded by the '!' operator, the resulting command
+     or action is performed on the service track.
 
-  (2) XXX
+  2. If DCC address is not specified the command will be launched against the
+     broadcast address.
 
+  3. If address is preceeded by a plus sign (`+`) command is sent using an
+     advanced address (4-digit/14bit).
+
+  4. If address is preceeded by a underscore sign (`_`) command is sent using a
+     short address (2-digit/7bit).
 
 `dcc`
   Go to DCC mode for digital locomotives.
 
-`dcc track (operations|service)`
-  Following commands will be sent to the normal operations track or the service
-  track.
-  
+`dcc address (advanced|normal)`
+  Use by default advanced addresses (14bit/4-digit) or normal addresses (7bit/2-digit).
+
+`dcc [!] [<n>] speed [4bit|5bit|7bit] [light (on|off)] [+-]<v>`
+  Send speed update to decoder <n>. In stateless mode CV#29:5 is assumed to be
+  on, and the default selected instruction is 5bit. In stateful mode, selected
+  instruction (4bit, 5bit or 7bit) depends on the state configured for deco
+  <n>.
+
+
 `dcc mode (pass_through|stateful)`
   Set DCC control mode:
     - stateless - pass through DCC commands. The DCC decoders state is never
       kept.
     - stateful - DCC decoders state is kept.
 
-`dcc [!] <n> speed [4bit|5bit|7bit] [+-]<v> [acked]`
-  Send speed update to decode <n>. In stateless mode CV#29:5 is assumed to be
-  on, and the default selected instruction is 5bit. In stateful mode, selected
-  instruction (4bit, 5bit or 7bit) depends on the state configured for deco
-  <n>.
-
-`dcc [!] <n> f <f> (on|off) [acked]`
+`dcc [!] [<n>] f <f> (on|off) [acked]`
   Set flag <f> (on|off)
 
-`dcc [!] <n> analog <f> <v> [acked]`
+`dcc [!] [<n>] analog <f> <v> [acked]`
 
-`dcc [!] <n> address (advanced|normal) [acked]`
-`dcc [!] <n> ack (service|railcom|off)`
-`dcc [!] <n> send [service] command <bytes...> [acked]`
-`dcc [!] <n> read <v> [mode (paged|direct)]`
+`dcc [!] [<n>] ack (service|railcom|off)`
+`dcc [!] [<n>] send [service] command <bytes...> [acked]`
+`dcc [!] [<n>] read <v> [mode (paged|direct)]`
