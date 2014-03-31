@@ -280,10 +280,10 @@ bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
 
 void DccMngr::refresh(void)
 {
+#if 0
 	static int lolol = 0;
 	static int dir = 20;
 
-#if 0
 	// update only each 20 iterations
 	if(lolol++ >= 20) {
 		dir = 0 - dir;
