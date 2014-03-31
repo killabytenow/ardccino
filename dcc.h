@@ -40,17 +40,45 @@ struct dcc_buffer_struct {
   uint16_t  address;
   uint8_t   len;
   uint8_t   reps;
-//uint16_t  command;
 };
 
-class DccMngr : public BoosterMngr {
-private:
-	int8_t                    service_booster;
-	void isr(struct dcc_buffer_struct *pool);
+struct dcc_state {
+	// DCC MSG BUFFER
+	struct dcc_buffer_struct  pool[DCC_BUFFER_POOL_SIZE];
+	byte                     *msg;              // Pointer into the current msg
+	int                       dcc_last_msg_id;  // Index of the last message sent
+	char                      msg_pending;      // Bytes pending to be sent
+	char                      dccZero;
+	unsigned char             dccCurrentBit;
+	unsigned                  dcc_excesive_lat; // Debugging flag: Excesive latency
+};
 
+struct dcc_deco {
+	uint16_t	addr;
+	#define DCC_DECO_ADDR_7BIT  0x0000
+	#define DCC_DECO_ADDR_14BIT 0xc000
+	uint16_t	speed;
+	#define DCC_DECO_SPEED_4BIT 0x0000
+	#define DCC_DECO_SPEED_5BIT 0x0100
+	#define DCC_DECO_SPEED_7BIT 0x0200
+	#define DCC_DECO_SPEED_MASK 0xff00
+};
+
+#define DCC_DECO_SPEED_GET7(x)		(((x) & 0x00ff) | DCC_DECO_SPEED_7BIT)
+#define DCC_DECO_SPEED_GET5(x)		(((x) & 0x003f) | DCC_DECO_SPEED_5BIT)
+#define DCC_DECO_SPEED_GET4(x,l)	(((x) & 0x000f) | DCC_DECO_SPEED_4BIT \
+					| ((l) ? 0x0010 : 0x0000))
+#define DCC_DECO_ADDR_GET7(x)           ((x) & 0x7f)
+#define DCC_DECO_ADDR_GET14(x)          (((x) & 0xc000) | 0xc000)
+
+class DccMngr : public BoosterMngr {
 public:
-	struct dcc_buffer_struct ope_buffer_pool[DCC_BUFFER_POOL_SIZE];
-	struct dcc_buffer_struct srv_buffer_pool[DCC_BUFFER_POOL_SIZE];
+	int8_t   service_booster;
+	struct   dcc_state operations;
+	struct   dcc_state service;
+	uint16_t default_addr_type;
+
+	void isr(struct dcc_state *ds, volatile uint16_t *OCR1x);
 
 	DccMngr();
 	DccMngr(int8_t service);
@@ -58,10 +86,11 @@ public:
 	void fini(void);
 	void refresh(void);
 
-	void isr_operations(void);
-	void isr_service(void);
+	// low level dcc methods
+	struct dcc_buffer_struct *slot_get(bool service_track, uint16_t address);
+	bool slot_commit(struct dcc_buffer_struct *slot);
 
-	struct dcc_buffer_struct *send_msg(bool service, byte *msg, uint8_t len);
+	bool set_speed(bool service_track, uint16_t address, uint16_t speed);
 };
 
 #endif

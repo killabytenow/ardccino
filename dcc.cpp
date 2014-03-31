@@ -25,114 +25,95 @@
 
 #include "config.h"
 #include "interrupts.h"
-//#include "USBAPI.h"
 #include "dcc.h"
 
 #define DCC_CTC_ZERO    232
 #define DCC_CTC_ONE     116
 
 ///////////////////////////////////////////////////////////////////////////////
-// ISR METHODS AND INTERRUPTION HANDLERS
-// (disabled automatically in simulator)
+// SIGNAL GENERATOR SUBROUTINES, ISR's AND METHOD
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned dcc_excesive_lat;    // Debugging flag: Excesive latency
 
 #ifndef SIMULATOR
-static byte dcc_msg_idle[4] = { 0xff, 0x00, 0xff, 0x00 };
-
-int dcc_last_msg_id;          // Index of the last message sent
-char msg_pending;             // Bytes pending to be sent
-byte *msg = NULL;             // Pointer into the current msg
+static byte dcc_msg_idle[3] = { 0xff, 0x00, 0xff };
 
 ISR(TIMER1_COMPA_vect)
 {
-	dcc.isr_operations();
+	for(int i = 0; i < BoosterMngr::nboosters; i++)
+		if(i != dcc.service_booster)
+			digitalWrite(BoosterMngr::boosters[i].dirSignalPin, dcc.operations.dccZero);
+	dcc.isr(&dcc.operations, &OCR1A);
 
-	// Capture the current timer value (TCTNx) for debugging purposes. It always
-	// should be below 116 (a DCC one). Elsewhere the DCC generator will produce
-	// corrupt signals :P
-	//unsigned int 
+	// Capture the current timer value (TCTNx) for debugging purposes. It
+	// always should be below 116 (a DCC one). Elsewhere the DCC generator
+	// will produce corrupt signals :P
 	unsigned int lat = TCNT1;
 	if(lat >= DCC_CTC_ONE)
-		dcc_excesive_lat = lat;
+		dcc.operations.dcc_excesive_lat = lat;
 }
 
-ISR(TIMER1_COMPB_vect)
+ISR(TIMER3_COMPA_vect)
 {
-	dcc.isr_service();
+	if(dcc.service_booster < 0)
+		return;
+	digitalWrite(BoosterMngr::boosters[dcc.service_booster].dirSignalPin, dcc.service.dccZero);
+	dcc.isr(&dcc.service, &OCR3A);
 
-	// Capture the current timer value (TCTNx) for debugging purposes. It always
-	// should be below 116 (a DCC one). Elsewhere the DCC generator will produce
-	// corrupt signals :P
-	//unsigned int 
-	unsigned int lat = TCNT1;
+	// Capture the current timer value (TCTNx) for debugging purposes. It
+	// always should be below 116 (a DCC one). Elsewhere the DCC generator
+	// will produce corrupt signals :P
+	unsigned int lat = TCNT3;
 	if(lat >= DCC_CTC_ONE)
-		dcc_excesive_lat = lat;
+		dcc.service.dcc_excesive_lat = lat;
 }
 
-void DccMngr::isr_operations(void)
+void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 {
-	isr(ope_buffer_pool);
-}
-
-void DccMngr::isr_service(void)
-{
-	isr(ope_buffer_pool);
-}
-
-void DccMngr::isr(struct dcc_buffer_struct *pool)
-{
-	static char dccZero = 0;
-	static unsigned char dccCurrentBit;
-
 	struct dcc_buffer_struct *cmsg;
 
 	/* invert signal */
-	for(int i = 0; i < BoosterMngr::nboosters; i++)
-		digitalWrite(BoosterMngr::boosters[i].pwmSignalPin, BoosterMngr::boosters[i].enabled);
-	if((dccZero = !dccZero))
+	if((ds->dccZero = !ds->dccZero))
 		return;
 
-	if(!msg) {
+	if(!ds->msg) {
 		// we are still in preamble
-		OCR1A = DCC_CTC_ONE;
-		if(--dccCurrentBit > 0)
+		*OCR1x = DCC_CTC_ONE;
+		if(--ds->dccCurrentBit > 0)
 			return;
 
 		// select next msg
-		dcc_last_msg_id = (dcc_last_msg_id + 1) & DCC_BUFFER_POOL_MASK;
-		cmsg = pool + dcc_last_msg_id;
+		ds->dcc_last_msg_id = (ds->dcc_last_msg_id + 1) & DCC_BUFFER_POOL_MASK;
+		cmsg = ds->pool + ds->dcc_last_msg_id;
 		if(cmsg->reps == 0) 
 			cmsg->reps = -1;
 		if(cmsg->reps > 0) {
-			msg         = cmsg->msg;
-			msg_pending = cmsg->len;
+			ds->msg         = cmsg->msg;
+			ds->msg_pending = cmsg->len;
 			cmsg->reps--;
 		} else {
-			msg         = dcc_msg_idle;
-			dcc_msg_idle[3] = dcc_msg_idle[0] ^ dcc_msg_idle[1]  ^ dcc_msg_idle[2];
-			msg_pending = sizeof(dcc_msg_idle);
+			ds->msg = dcc_msg_idle;
+			ds->msg_pending = sizeof(dcc_msg_idle);
 		}
-		dccCurrentBit = 0;
+		ds->dccCurrentBit = 0;
 	} else {
-		if(dccCurrentBit) {
+		if(ds->dccCurrentBit) {
 			// send data bit
-			OCR1A = (*msg & dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
-			dccCurrentBit >>= 1;
-			if(!dccCurrentBit) {
-				msg++;
-				msg_pending--;
+			*OCR1x = (*ds->msg & ds->dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
+			ds->dccCurrentBit >>= 1;
+			if(!ds->dccCurrentBit) {
+				ds->msg++;
+				ds->msg_pending--;
 			}
 		} else {
 			// separator bit
-			dccCurrentBit = 0x80;
-			if(msg_pending <= 0) {
-				msg = NULL;
-				dccCurrentBit = 16;
-				OCR1A = DCC_CTC_ONE; // last bit
+			ds->dccCurrentBit = 0x80;
+			if(ds->msg_pending <= 0) {
+				ds->msg = NULL;
+				ds->dccCurrentBit = 16;
+				*OCR1x = DCC_CTC_ONE; // last bit
 			} else {
-				OCR1A = DCC_CTC_ZERO; // more data will come
+				*OCR1x = DCC_CTC_ZERO; // more data will come
 			}
 		}
 	}
@@ -157,8 +138,8 @@ void DccMngr::init(void)
 
 	disable_interrupts();
 
-	// CONFIGURE TIMER 1
 #ifndef SIMULATOR
+	// CONFIGURE TIMER 1
 	TCCR1A = (TCCR1A & 0b00001100)
 	       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
 	       | 0b00000000     // OC1A disconnected
@@ -166,7 +147,7 @@ void DccMngr::init(void)
 	TCCR1B = (TCCR1B & 0b11100000)
 	       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
 	       | 0b00001000;    // Normal mode (!WGM13, WGM12)
-	OCR1B = 0;      // set compare registers to 0
+	OCR1B = 0xffff;         // set compare registers
 	OCR1A = DCC_CTC_ZERO;
 	TIMSK1 = (TIMSK1 & 0b11011000)
 	       | (1 << OCIE1A); // output cmp A match interrupt enable
@@ -176,6 +157,21 @@ void DccMngr::init(void)
 	TCCR2B = TCCR2B & 0b11110000;
 	OCR2A = OCR2B = 0;
 	TIMSK2 &= 0b11111000;
+
+	if(service_booster >= 0) {
+		// CONFIGURE TIMER 3
+		TCCR3A = (TCCR3A & 0b00001100)
+		       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
+		       | 0b00000000     // OC3A disconnected
+		       | 0b00000000;    // OC3B disconnected
+		TCCR3B = (TCCR3B & 0b11100000)
+		       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
+		       | 0b00001000;    // Normal mode (!WGM13, WGM12)
+		OCR3B = 0xffff;         // set compare registers
+		OCR3A = DCC_CTC_ZERO;
+		TIMSK3 = (TIMSK3 & 0b11011000)
+		       | (1 << OCIE3A); // output cmp A match interrupt enable
+	}
 #endif
 
 	// SET PWM OUTPUTS TO 1
@@ -184,8 +180,8 @@ void DccMngr::init(void)
 
 	//-------------------------------------------
 	// RESET DCC STATUS
-	memset(ope_buffer_pool, 0, sizeof(ope_buffer_pool));
-	memset(srv_buffer_pool, 0, sizeof(srv_buffer_pool));
+	memset(&operations, 0, sizeof(operations));
+	memset(&operations, 0, sizeof(service));
 
 	enable_interrupts();
 }
@@ -205,82 +201,106 @@ void DccMngr::fini(void)
 	enable_interrupts();
 }
 
-unsigned int dir = 0;
-void DccMngr::refresh(void)
+struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address)
 {
-	static unsigned int lolol = 0;
+	int i;
+	struct dcc_buffer_struct *slot =
+			service_track ? service.pool : operations.pool;
 
-	// update only each 20 iterations
-	if(lolol++ >= 20) {
-		//byte msg[] = { 3, 0b10000000 };
-		//msg[1] |= dir ? 0b10010000 : 0;
-		byte msg[] = { 3, 0b01001000 };
-		msg[1] |= dir ? 0b00100000 : 0;
-		dir = !dir;
-		lolol = 0;
-		struct dcc_buffer_struct *b = send_msg(false, msg, sizeof(msg));
-		if(b) {
-			cli.debug("nmsg.len = %d", b->len);
-			for(unsigned char i = 0; i < b->len; i++)
-				cli.debug("    msg[%d] = %d", i, b->msg[i]);
+	for(i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
+		if(address == slot->address || !slot->address) {
+			// deactivate slot
+			slot->reps = 0;
+			slot->address = 0xffff;
 		}
+		if(slot->reps < 0)
+			break;
 	}
-
-	// warn about excesive latencies
-	if(dcc_excesive_lat)
-		cli.error("dcc_excesive_lat = %d", dcc_excesive_lat);
+	if(i >= DCC_BUFFER_POOL_SIZE)
+		return NULL;
+	slot->address = address;
+	if(address & DCC_DECO_ADDR_14BIT) {
+		if((address & 0xff00) == 0xff00) {
+			slot->reps = -1;
+			cli.error("Bad 14-bit address %x", address);
+			return NULL;
+		}
+		slot->msg[0] = address & 0x00ff;
+		slot->msg[1] = address >> 8;
+		slot->len = 2;
+	} else {
+		slot->msg[0] = address & 0x00ff;
+		slot->len = 1;
+	}
+	return slot;
 }
 
-struct dcc_buffer_struct *DccMngr::send_msg(bool service, byte *msg, uint8_t len)
+bool DccMngr::slot_commit(struct dcc_buffer_struct *slot)
 {
-	unsigned int address;
-	struct dcc_buffer_struct *selected_buffer;
-	struct dcc_buffer_struct *buffer_pool =
-		service ? srv_buffer_pool
-			: ope_buffer_pool;
-  
-	if(len < 2 || len >= DCC_MSG_MAX)
-		cli.fatal("Bad message size");
-  
-	// extract address
-	address = msg[0]; // enough for 7-bit address, or broadcast (0x00) or idle packets (0xff)
-	if(address & 0x80 && address != 0xff) {
-		// yep! two-byte address
-		if(len == 2)
-			cli.fatal("Message too short (2 byte address in a 2 byte packet)");
-		address = address << 8 | msg[1];
-	}
-  
-	// extract command
-	//command = *n & 0b11100000;
-	//if(command == 0b01100000)
-	//  command = 0b11000000;
-  
-	// search free buffer and kill other related buffers
-	selected_buffer = NULL;
-	for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
-		if(address == buffer_pool[i].address
-		|| !buffer_pool[i].address) {
-			buffer_pool[i].reps = 0;
-			buffer_pool[i].address = 0xffff;
-		}
-		if(!selected_buffer && buffer_pool[i].reps < 0)
-			selected_buffer = buffer_pool + i;
-	}
-	cli.debug("selected_buffer=%d", selected_buffer);
-	if(!selected_buffer)
-		return NULL;
+	byte chksum, *msg;
 
-	// copy msg to selected buffer
-	byte x = 0;
-	for(unsigned char i = 0; i < len; i++)
-		x ^= selected_buffer->msg[i] = msg[i];
-	selected_buffer->msg[len] = x;
-	selected_buffer->len = len + 1;
-	//selected_buffer->command = command;
-	selected_buffer->address = address;
-	selected_buffer->reps = 100;
+	if(slot->len < 2 || slot->len >= DCC_MSG_MAX) {
+		cli.error("Bad message size");
+		return true;
+	}
 
-	return selected_buffer;
+	// calculate checksum
+	chksum = 0;
+	msg = slot->msg;
+	for(uint8_t i = 0; i < slot->len; i++)
+		chksum ^= *msg++;
+	*msg = chksum;
+	slot->len++;
+
+	// commit message
+	slot->reps = 5;
+
+	return true;
+}
+
+bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
+{
+	struct dcc_buffer_struct *slot;
+	byte *msg;
+
+	if(!(slot = slot_get(service_track ? service.pool : operations.pool, address)))
+		return false;
+	msg = slot->msg + slot->len;
+
+	if((speed & DCC_DECO_SPEED_MASK) == DCC_DECO_SPEED_7BIT) {
+		msg[0] = 0x3f; // 128 speed control command
+		msg[1] = speed & ~DCC_DECO_SPEED_MASK;
+		slot->len += 2;
+	} else {
+		msg[0] = 0x40 | (speed & 0x3f);
+		slot->len++;
+	}
+	return slot_commit(slot);
+}
+
+void DccMngr::refresh(void)
+{
+	static int lolol = 0;
+	static int dir = 20;
+
+#if 0
+	// update only each 20 iterations
+	if(lolol++ >= 20) {
+		dir = 0 - dir;
+		lolol = 0;
+		if(!set_speed(false, DCC_DECO_ADDR_GET7(3), DCC_DECO_SPEED_GET5(5)))
+			cli.debug("cannot send speed");
+	}
+#endif
+
+	// warn about excesive latencies
+	if(operations.dcc_excesive_lat) {
+		cli.error("operations.dcc_excesive_lat = %d", operations.dcc_excesive_lat);
+		operations.dcc_excesive_lat = 0;
+	}
+	if(service.dcc_excesive_lat) {
+		cli.error("service.dcc_excesive_lat = %d", service.dcc_excesive_lat);
+		service.dcc_excesive_lat = 0;
+	}
 }
 
