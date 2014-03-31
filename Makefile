@@ -59,8 +59,8 @@ all : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
 simulator : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
 	$(MAKE) -f Simulator.mk
 
-auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h clihelp.h : tokens.list clierrs.list banner.txt banner_wide.txt clihelp.txt gen_code.sh
-	./gen_code.sh
+auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h clihelp.h : tokens.list clierrs.list banner.txt banner_wide.txt clihelp.txt gen_code.pl
+	./gen_code.pl
 
 clean :
 	$(MAKE) -f Simulator.mk clean
