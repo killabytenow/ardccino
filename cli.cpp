@@ -71,6 +71,9 @@ void Cli::_msg(const char *prefix, const char *frmt, va_list args)
 			case '\0':
 				Serial.print('%');
 				break;
+			case 'b':
+				Serial.print((bool) va_arg(args, int) ? "true" : "false");
+				break;
 			case 'd':
 				{
 				int x = va_arg(args, int);
@@ -264,7 +267,7 @@ void Cli::booster_status(Booster *b)
 				return CLI_ERR_TOO_MANY_PARAMS;  \
 		}
 
-bool Cli::parse_integer(char *token, int *v)
+bool Cli::parse_integer(char *token, uint16_t *v)
 {
 	int n, neg;
 	int type;
@@ -281,23 +284,22 @@ bool Cli::parse_integer(char *token, int *v)
 	if(strlen(token) > 2
 	&& token[0] == '0'
 	&& (token[1] == 'x' || token[2] == 'X')) {
-		// c/c++ hex number
+		// c/c++ hex number (0x2222)
 		type = 1;
 		token += 2;
 	} else
 	type = (strlen(token) > 1
 		&& (token[strlen(token)-1] == 'h' || token[strlen(token)-1] == 'H'))
-		? 2	// asm hex number
-		: 0;	// decimal number
+		? 2	// asm hex number (2222h)
+		: 0;	// decimal number (2222)
 
 	// parse num
 	n = 0;
 	switch(type) {
 	case 0: // decimal number
 		for(; *token; token++) {
-			if(*token < '0' || *token > '9') {
+			if(*token < '0' || *token > '9')
 				return false;
-			}
 			n = (n * 10) + (*token - '0');
 		}
 		break;
@@ -313,10 +315,14 @@ bool Cli::parse_integer(char *token, int *v)
 			if(*token >= 'A' && *token <= 'F')
 				n = (n << 4) | (*token - 'A' + 10);
 			else
-			break;
+			if(type == 2 && (*token == 'h' || *token == 'H')) {
+				if(*++token != 0)
+					return false; // bad asm hex number
+				break; // break loop
+			} else
+				return false;
 		}
-		if((type != 2 && *token)
-		|| (type == 2 && (*token != 'h' && *token != 'H')))
+		if(*token)
 			return false;
 		break;
 	default:
@@ -326,7 +332,7 @@ bool Cli::parse_integer(char *token, int *v)
 	return true;
 }
 
-int Cli::parse_token(char *token, int *v)
+int Cli::parse_token(char *token, uint16_t *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
 	unsigned l = strlen(token);
@@ -349,7 +355,8 @@ int Cli::parse_token(char *token)
 
 int Cli::execute_booster(char **token, char ntokens)
 {
-	int t, booster, a;
+	uint16_t booster, a;
+	int t;
 
 	// here we need at least 2 tokens
 	CLI_TOKEN_AT_LEAST(2);
@@ -371,7 +378,7 @@ int Cli::execute_booster(char **token, char ntokens)
 	// here we need at least 3 tokens
 	CLI_TOKEN_AT_LEAST(3);
 
-	switch(parse_token(token[2], NULL)) {
+	switch(parse_token(token[2])) {
 	case CLI_TOKEN_RESET:
 		CLI_TOKEN_EXPECTED(3);
 		BoosterMngr::booster(booster)->reset();
@@ -409,7 +416,7 @@ int Cli::execute_booster(char **token, char ntokens)
 		CLI_TOKEN_EXPECTED(4);
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(parse_token(token[3], NULL)) {
+		switch(parse_token(token[3])) {
 		case CLI_TOKEN_DIRECT:
 			BoosterMngr::booster(booster)->set_mode_direct();
 			break;
@@ -432,7 +439,7 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> minimum power [<v>]
 	case CLI_TOKEN_MINIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(parse_token(token[3], NULL) != CLI_TOKEN_POWER)
+		if(parse_token(token[3]) != CLI_TOKEN_POWER)
 			return CLI_ERR_BAD_SYNTAX;
 		if(parse_token(token[4], &a) != CLI_TOKEN_INTEGER)
 			return CLI_ERR_BAD_SYNTAX;
@@ -447,7 +454,7 @@ int Cli::execute_booster(char **token, char ntokens)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(parse_token(token[3], NULL)) {
+		switch(parse_token(token[3])) {
 		case CLI_TOKEN_ACCELERATION:
 			BoosterMngr::booster(booster)->set_max_accel(a);
 			break;
@@ -466,16 +473,165 @@ int Cli::execute_booster(char **token, char ntokens)
 
 // PENDING COMMANDS
 // COMMAND: dcc mode (pass_through|stateful)
-// COMMAND: dcc [!] <n> speed [4bit|5bit|7bit] [+-]<v> [acked]
 // COMMAND: dcc [!] <n> f <f> (on|off) [acked]
 // COMMAND: dcc [!] <n> analog <f> <v> [acked]
-// COMMAND: dcc [!] <n> address (advanced|normal) [acked]
 // COMMAND: dcc [!] <n> ack (service|railcom|off)
 // COMMAND: dcc [!] <n> send [service] command <bytes...> [acked]
 // COMMAND: dcc [!] <n> read <v> [mode (paged|direct)]
+
+// COMMAND: dcc [!] [<n>] speed [4bit|5bit|7bit] [light (on|off)] [+-]<v> [acked]
+int Cli::execute_dcc_speed(char **token, char ntokens, bool service_track, uint16_t address)
+{
+	uint16_t speed = 0;
+	int st;
+	bool light = false;
+
+	cli.debug("token=%s ntokens=%d", *token, ntokens);
+	if(ntokens < 1)
+		return CLI_ERR_NEED_MORE_PARAMS;
+
+	cli.debug("lol token=%s ntokens=%d", *token, ntokens);
+	switch(st = parse_token(*token)) {
+	case CLI_TOKEN_4BIT:
+		cli.debug("Selected 4");
+		ntokens--; token++;
+		if(ntokens < 1)
+			return CLI_ERR_NEED_MORE_PARAMS;
+		if(parse_token(*token) == CLI_TOKEN_LIGHT) {
+			ntokens--; token++;
+			goto light;
+		}
+		break;
+
+	case CLI_TOKEN_LIGHT:
+		cli.info("'light' parameter forces deprecated 4bit speed mode.");
+		st = CLI_TOKEN_4BIT;
+		ntokens--; token++;
+		goto light;
+
+	case CLI_TOKEN_5BIT:
+	case CLI_TOKEN_7BIT:
+		cli.debug("Selected 5/7");
+		ntokens--; token++;
+		goto speed;
+		
+	default:
+		cli.debug("TODO: get current deco speed and type");
+		st = CLI_TOKEN_5BIT;
+		goto speed;
+	}
+
+light:
+	if(ntokens < 1)
+		return CLI_ERR_NEED_MORE_PARAMS;
+	switch(parse_token(*token)) {
+	case CLI_TOKEN_ON:
+		light = true;
+		break;
+	case CLI_TOKEN_OFF:
+		light = false;
+		break;
+	default:
+		return CLI_ERR_BAD_SYNTAX;
+	}
+	ntokens--; token++;
+
+speed:
+	cli.debug("st=%x token=%s ntokens=%d light=%b", st, token, ntokens, light);
+
+	if(ntokens < 1)
+		return CLI_ERR_NEED_MORE_PARAMS;
+	if(parse_token(*token, &speed) != CLI_TOKEN_INTEGER)
+		return CLI_ERR_BAD_SYNTAX;
+
+	switch(st) {
+	case CLI_TOKEN_4BIT: speed = DCC_DECO_SPEED_GET4(speed, light); break;
+	case CLI_TOKEN_5BIT: speed = DCC_DECO_SPEED_GET5(speed);        break;
+	case CLI_TOKEN_7BIT: speed = DCC_DECO_SPEED_GET7(speed);        break;
+	}
+
+	cli.debug("st=%x speed=%x light=%b", speed, light);
+	if(!dcc.set_speed(service_track, address, speed))
+		return CLI_ERR_OP_FAILED;
+	return CLI_ERR_OK;
+}
+
 int Cli::execute_dcc(char **token, char ntokens)
 {
-	return CLI_ERR_NOT_IMPLEMENTED;
+	bool service_track = false;
+	uint16_t address, address_t;
+
+	// command addressed to service track?
+	if(token[0][0] == '!') {
+		service_track = true;
+		if(!token[0][1]) {
+			token++;
+			ntokens--;
+		} else
+			token[0]++;
+	}
+	if(!ntokens)
+		return CLI_ERR_NEED_MORE_PARAMS;
+
+	// decide address type
+	if(token[0][0] == '_' || token[0][0] == '+') {
+		address_t = token[0][0] == '_' ? DCC_DECO_ADDR_14BIT : DCC_DECO_ADDR_7BIT;
+		if(!token[0][1]) {
+			token++;
+			ntokens--;
+		} else
+			token[0]++;
+	} else {
+		address_t = dcc.default_addr_type;
+	}
+	if(!ntokens)
+		return CLI_ERR_NEED_MORE_PARAMS;
+
+	// broadcast or directed message?
+	if(parse_integer(*token, &address)) {
+		token++;
+		ntokens--;
+		if(address < 0)
+			return CLI_ERR_BAD_SYNTAX;
+		address |= address_t;
+	} else {
+		address = 0x0000; // broadcast
+	}
+	if(!ntokens)
+		return CLI_ERR_NEED_MORE_PARAMS;
+
+	SIM_DBG("!=%d address=%x", service_track, address);
+	cli.debug("!=%b address=%x", service_track, address);
+
+	// process dcc command
+	switch(parse_token(*token)) {
+	case CLI_TOKEN_ADDRESS:
+		if(ntokens < 2)
+			return CLI_ERR_NEED_MORE_PARAMS;
+		if(ntokens > 2)
+			return CLI_ERR_TOO_MANY_PARAMS;
+		switch(parse_token(token[1])) {
+		case CLI_TOKEN_ADVANCED:
+			cli.info("Using 4-digit (14bit) addresses by default.");
+			dcc.default_addr_type = DCC_DECO_ADDR_14BIT;
+			break;
+		case CLI_TOKEN_NORMAL:
+			cli.info("Using 2-digit (7bit) addresses by default.");
+			dcc.default_addr_type = DCC_DECO_ADDR_7BIT;
+			break;
+		default:
+			return CLI_ERR_BAD_SYNTAX;
+		}
+		break;
+
+	case CLI_TOKEN_SPEED:
+		return execute_dcc_speed(token+1, ntokens-1, service_track, address);
+
+	default:
+		return CLI_ERR_NOT_IMPLEMENTED;
+	}
+
+	return CLI_ERR_OK;
 }
 
 int Cli::execute(char **token, char ntokens)
@@ -507,8 +663,8 @@ int Cli::execute(char **token, char ntokens)
 	// COMMAND:  dcc
 	// COMMANDS: dcc ***
 	case CLI_TOKEN_DCC:
-		if(ntokens != 1)
-			return execute_dcc(token, ntokens);
+		if(ntokens > 1)
+			return execute_dcc(token + 1, ntokens - 1);
 		dcc.enable();
 		break;
 	// COMMANDS: booster ***
