@@ -336,14 +336,15 @@ int Cli::parse_token(char *token, uint16_t *v)
 {
 	char buffer[CLI_TOKEN_MAX_LEN];
 	unsigned l = strlen(token);
-	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(char *)); i++) {
-		strcpy_P(buffer, (char *) pgm_read_ptr(&(cli_tokens[i])));
-		if(l <= strlen(buffer) && !strncasecmp(token, buffer, strlen(token)))
+	for(int i = 0; i < (signed) (sizeof(cli_tokens) / sizeof(cli_token_t)); i++) {
+		strcpy_P(buffer, (char *) pgm_read_ptr(&(cli_tokens[i].token)));
+		if(l <= strlen(buffer)
+		&& pgm_read_byte(&(cli_tokens[i].minlen)) <= l
+		&& !strncasecmp(token, buffer, strlen(token)))
 			return i;
 	}
 	if(v && parse_integer(token, v))
 		return CLI_TOKEN_INTEGER;
-	SIM_DBG("uknown token [%s]", token);
 
 	return -1;
 }
@@ -371,7 +372,7 @@ int Cli::execute_booster(char **token, char ntokens)
 
 	// COMMAND: booster <n> ***
 	if(t != CLI_TOKEN_INTEGER)
-		return CLI_ERR_UNKNOWN_COMMAND;
+		return CLI_ERR_BAD_SYNTAX;
 	if(BoosterMngr::booster(booster) == NULL)
 		return CLI_ERR_BAD_BOOSTER;
 

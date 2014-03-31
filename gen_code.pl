@@ -103,7 +103,7 @@ sub build_tokens_h__print_list_r
 
 	foreach my $n (map { $t->{$_} } sort keys %{$t}) {
 		if(exists($n->{token})) {
-			$n->{id} = ++$$curr_id;
+			$n->{id} = $$curr_id++;
 			$$max_len = length($n->{token}) if(length($n->{token}) > $$max_len);
 			print $fo "#define CLI_TOKEN_$n->{def} $n->{id}\n";
 			print $fo "PROGMEM const char cli_token_$n->{id}\[]\ = \"$n->{token}\";\n";
@@ -119,7 +119,12 @@ sub build_tokens_h__print_symtab_r
 
 	foreach my $n (map { $t->{$_} } sort keys %{$t}) {
 		if(exists($n->{token})) {
-			print $fo "cli_token_$n->{id},\n";
+			#print $fo "cli_token_$n->{id},\n";
+			printf $fo "\t{ cli_token_%d, %d },\t// %-5s => %s\n",
+					$n->{id},
+					length($n->{_prefix}),
+					$n->{_prefix},
+					$n->{token};
 		} else {
 			build_tokens_h__print_symtab_r($n, $fo);
 		}
@@ -143,7 +148,15 @@ sub build_tokens_h__print
 
 	printf $fo "\n#define CLI_TOKEN_MAX_LEN %d\n\n", $max_len + 1;
 
-	print $fo "PROGMEM const char * const cli_tokens[] = {\n";
+	#print $fo "PROGMEM const char * const cli_tokens[] = {\n";
+	#build_tokens_h__print_symtab_r($t, $fo);
+	#print $fo "};\n";
+
+	print $fo "typedef struct PROGMEM {\n";
+	print $fo "	const char * const token;\n";
+	print $fo "	uint8_t            minlen;\n";
+	print $fo "} cli_token_t;\n\n";
+	print $fo "cli_token_t cli_tokens[] = {\n";
 	build_tokens_h__print_symtab_r($t, $fo);
 	print $fo "};\n";
 }
