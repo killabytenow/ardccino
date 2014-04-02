@@ -77,10 +77,10 @@ USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_
 		$(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
 CPPFLAGS      = -DSIMULATOR $(FEATURES:%=-D%=1) -I. $(USER_INCLUDES) -Wall `pkg-config --cflags --libs gtk+-3.0 vte-2.90`
 CPPLIBS       = -lc -lm -lstdc++ -lutil `pkg-config --libs gtk+-3.0 vte-2.90`
-CFLAGS        = -std=gnu99 -g
-CXXFLAGS      = -fno-exceptions -g
-ASFLAGS       = -I. -x assembler-with-cpp
-LDFLAGS       = -Wl,--gc-sections
+CFLAGS        += -std=gnu99 -g $(EXTRA_FLAGS) $(EXTRA_CFLAGS)
+CXXFLAGS      += -fno-exceptions -g $(EXTRA_FLAGS) $(EXTRA_CXXFLAGS)
+ASFLAGS       += -I. -x assembler-with-cpp
+LDFLAGS       += -Wl,--gc-sections $(EXTRA_FLAGS) $(EXTRA_CXXFLAGS)
 
 # Dependency files
 DEPS          = $(LOCAL_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d)
