@@ -43,7 +43,7 @@ void StdSerial::set_fd(int fd)
 	this->fd = fd;
 }
 
-void StdSerial::begin(int speed)
+void StdSerial::begin(int)
 {
 }
 
