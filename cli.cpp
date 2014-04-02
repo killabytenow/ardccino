@@ -52,7 +52,6 @@ Cli::Cli(void)
 void Cli::init(void)
 {
 	Serial.begin(CLI_SERIAL_SPEED);
-	Serial.println("Initializing");
 	
 	// enable "Set cursor key to application" DECCKM mode
 	//   This mode forbids user to move cursor freely along the screen :D
@@ -511,14 +510,11 @@ int Cli::execute_dcc_speed(char **token, char ntokens, bool service_track, uint1
 	int st;
 	bool light = false;
 
-	cli.debug("token=%s ntokens=%d", *token, ntokens);
 	if(ntokens < 1)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
-	cli.debug("lol token=%s ntokens=%d", *token, ntokens);
 	switch(st = parse_token(*token)) {
 	case CLI_TOKEN_4BIT:
-		cli.debug("Selected 4");
 		ntokens--; token++;
 		if(ntokens < 1)
 			return CLI_ERR_NEED_MORE_PARAMS;
@@ -536,15 +532,15 @@ int Cli::execute_dcc_speed(char **token, char ntokens, bool service_track, uint1
 
 	case CLI_TOKEN_5BIT:
 	case CLI_TOKEN_7BIT:
-		cli.debug("Selected 5/7");
 		ntokens--; token++;
-		goto speed;
+		break;
 		
 	default:
-		cli.debug("TODO: get current deco speed and type");
+#warning "TODO: get current deco speed and type"
 		st = CLI_TOKEN_5BIT;
-		goto speed;
+		break;
 	}
+	goto speed;
 
 light:
 	if(ntokens < 1)
@@ -562,8 +558,6 @@ light:
 	ntokens--; token++;
 
 speed:
-	cli.debug("st=%x token=%s ntokens=%d light=%b", st, token, ntokens, light);
-
 	if(ntokens < 1)
 		return CLI_ERR_NEED_MORE_PARAMS;
 	if(parse_token(*token, (int16_t *) &speed) != CLI_TOKEN_INT)
@@ -571,13 +565,15 @@ speed:
 
 	switch(st) {
 	case CLI_TOKEN_4BIT: speed = DCC_DECO_SPEED_GET4(speed, light); break;
-	case CLI_TOKEN_5BIT: speed = DCC_DECO_SPEED_GET5(speed);        break;
-	case CLI_TOKEN_7BIT: speed = DCC_DECO_SPEED_GET7(speed);        break;
+	case CLI_TOKEN_5BIT: speed = DCC_DECO_SPEED_GET5(speed); break;
+	case CLI_TOKEN_7BIT: speed = DCC_DECO_SPEED_GET7(speed); break;
 	}
+	if(speed == DCC_DECO_SPEED_BAD)
+		return CLI_ERR_OUT_OF_BOUNDS;
 
-	cli.debug("st=%x speed=%x light=%b", speed, light);
 	if(!dcc.set_speed(service_track, address, speed))
 		return CLI_ERR_OP_FAILED;
+
 	return CLI_ERR_OK;
 }
 
@@ -599,8 +595,8 @@ int Cli::execute_dcc(char **token, char ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
 	// decide address type
-	if(token[0][0] == '_' || token[0][0] == '+') {
-		address_t = token[0][0] == '_' ? DCC_DECO_ADDR_14BIT : DCC_DECO_ADDR_7BIT;
+	if(token[0][0] == '-' || token[0][0] == '+') {
+		address_t = token[0][0] == '-' ? DCC_DECO_ADDR_7BIT : DCC_DECO_ADDR_14BIT;
 		if(!token[0][1]) {
 			token++;
 			ntokens--;
@@ -616,21 +612,22 @@ int Cli::execute_dcc(char **token, char ntokens)
 	if(parse_unsigned(*token, &address)) {
 		token++;
 		ntokens--;
-		if(address < 0)
-			return CLI_ERR_BAD_SYNTAX;
-		address |= address_t;
+#warning "TODO: check address"
+		if(address != 0)
+			address |= address_t;
 	} else {
-		address = 0x0000; // broadcast
+		address = 0; // broadcast
 	}
 	if(!ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
-	SIM_DBG("!=%d address=%x", service_track, address);
-	cli.debug("!=%b address=%x", service_track, address);
+	cli.debug("service_track=%b address=%x", service_track, address);
 
 	// process dcc command
 	switch(parse_token(*token)) {
 	case CLI_TOKEN_ADDRESS:
+		if(address || service_track)
+			return CLI_ERR_BAD_SYNTAX;
 		if(ntokens < 2)
 			return CLI_ERR_NEED_MORE_PARAMS;
 		if(ntokens > 2)
@@ -661,7 +658,6 @@ int Cli::execute_dcc(char **token, char ntokens)
 
 int Cli::execute(char **token, char ntokens)
 {
-	SIM_DBG("execute token[0]='%s'", token[0]);
 	switch(parse_token(token[0])) {
 	// COMMAND: about
   	case CLI_TOKEN_ABOUT:
@@ -787,12 +783,14 @@ ojete:
 		case '9':
 			break;
 		default:
+#ifdef SIMULATOR
 			if(!(c >= 'a' && c <= 'z')
 			&& !(c >= 'A' && c <= 'Z')
 			&& !(c >= '0' && c <= '9')
-			&& c != ' '
+			&& c != ' ' && c != '-' && c != '+'
 			&& c != '?')
 				SIM_DBG("puta=%d (%c)", c, c);
+#endif
 			input_add(c);
 		}
 	}
