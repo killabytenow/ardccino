@@ -49,11 +49,11 @@ typedef uint16_t           word;
 			b = a;                      \
 			a = __swap__temp__c;        \
 		}
-#define cbi(x,y)
-#define sbi(x,y)
+#define cbi(x,y)		{ }
+#define sbi(x,y)		{ }
 #define pgm_read_byte(x)	(*((byte *) (x)))
 #define pgm_read_word(x)	(*((word *) (x)))
-#define pgm_read_ptr(x)         (*((void **) (x)))
+#define pgm_read_ptr(x)		(*((void **) (x)))
 
 #define strcpy_P(x, y)		strcpy((x), (y))
 
@@ -63,5 +63,7 @@ typedef uint16_t           word;
 #define digitalWrite(x, y)
 #define delay(x)		usleep((x) * 1000)
 #define PROGMEM
+
+#define UNUSED(x)		{ if(0) { (void)(x); } } 
 
 #endif
