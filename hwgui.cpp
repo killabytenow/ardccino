@@ -143,7 +143,7 @@ UIScreen *UIHello::do_tick_event(void)
 void UIGlobalConfig::draw(void)
 {
 	//int i;
-	int x1, y1, x2, y2;
+	//int x1, y1, x2, y2;
 
 	tft.setBackColor(VGA_TRANSPARENT);
 	if(!focus) {
