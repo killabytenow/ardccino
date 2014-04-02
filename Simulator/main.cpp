@@ -141,17 +141,16 @@ extern void loop(void);
 extern UTFT tft;
 #endif
 
-static gpointer thread_func(gpointer data)
+static gpointer thread_func(gpointer)
 {
 	setup();
 	while(1)
 		loop();
-
 	return NULL;
 }
 
 static void close_window(
-		GtkWidget *widget,
+		GtkWidget *, // widget - unused parameter
 		gpointer   data)
 {
 	g_print("closing window\n");
@@ -198,9 +197,9 @@ int main(int argc, char *argv[])
 
 	// build cli params
 	GOptionEntry entries[] = {
-		{ "model", 'm', 0, G_OPTION_ARG_STRING, &model, "Emulated UTFT screen", "M" },
-		{ "zoom",  'z', 0, G_OPTION_ARG_INT,    &zoom,  "Zoom factor",          "Z" },
-		{ NULL },
+		{ "model", 'm', 0, G_OPTION_ARG_STRING, &model, "Emulated UTFT screen", "M"  },
+		{ "zoom",  'z', 0, G_OPTION_ARG_INT,    &zoom,  "Zoom factor",          "Z"  },
+		{ NULL,      0, 0, G_OPTION_ARG_NONE,   NULL,   NULL,                   NULL },
 	};
 	context = g_option_context_new("UTFT emulator");
 	g_option_context_add_main_entries(context, entries, NULL);
