@@ -31,11 +31,11 @@
 #  include <avr/interrupt.h>
 #  include <avr/pgmspace.h>
 #  define pgm_read_ptr(x) pgm_read_word(x)
-#  define SIM_DBG(...)
+#  define SIM_DBG(...)      {}
 #else
 #  include "Ardsim.h"
 #  include <stdlib.h>
-#  define SIM_DBG(frm, ...)    g_print(__FILE__ ":%s:" frm "\n", __func__, __VA_ARGS__)
+#  define SIM_DBG(frm, ...) g_print(__FILE__ ":%s:" frm "\n", __func__, __VA_ARGS__)
 #endif
 #include <UTFT.h>
 
