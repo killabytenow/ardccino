@@ -28,13 +28,7 @@
 
 void OffMngr::init(void)
 {
-	cli.debug("Initializing OFF.");
-
 	for(int b = 0; b < BoosterMngr::nboosters; b++) {
-		cli.debug("stoping booster %d (%d, %d)",
-				b,
-				BoosterMngr::boosters[b].pwmSignalPin,
-				BoosterMngr::boosters[b].dirSignalPin);
 		digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, LOW);
 		digitalWrite(BoosterMngr::boosters[b].dirSignalPin, LOW);
 	  }
