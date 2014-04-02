@@ -68,6 +68,8 @@ ISR(TIMER3_COMPA_vect)
 		dcc.service.dcc_excesive_lat = lat;
 }
 
+//#define OCRXX *OCR1x
+#define OCRXX OCR1A
 void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 {
 	struct dcc_buffer_struct *cmsg;
@@ -78,7 +80,7 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 
 	if(!ds->msg) {
 		// we are still in preamble
-		*OCR1x = DCC_CTC_ONE;
+		OCRXX = DCC_CTC_ONE;
 		if(--ds->dccCurrentBit > 0)
 			return;
 
@@ -99,7 +101,7 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 	} else {
 		if(ds->dccCurrentBit) {
 			// send data bit
-			*OCR1x = (*ds->msg & ds->dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
+			OCRXX = (*ds->msg & ds->dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
 			ds->dccCurrentBit >>= 1;
 			if(!ds->dccCurrentBit) {
 				ds->msg++;
@@ -111,9 +113,9 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 			if(ds->msg_pending <= 0) {
 				ds->msg = NULL;
 				ds->dccCurrentBit = 16;
-				*OCR1x = DCC_CTC_ONE; // last bit
+				OCRXX = DCC_CTC_ONE; // last bit
 			} else {
-				*OCR1x = DCC_CTC_ZERO; // more data will come
+				OCRXX = DCC_CTC_ZERO; // more data will come
 			}
 		}
 	}
@@ -147,7 +149,7 @@ void DccMngr::init(void)
 	TCCR1B = (TCCR1B & 0b11100000)
 	       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
 	       | 0b00001000;    // Normal mode (!WGM13, WGM12)
-	OCR1B = 0xffff;         // set compare registers
+	OCR1B = 0;         // set compare registers
 	OCR1A = DCC_CTC_ZERO;
 	TIMSK1 = (TIMSK1 & 0b11011000)
 	       | (1 << OCIE1A); // output cmp A match interrupt enable
@@ -181,7 +183,8 @@ void DccMngr::init(void)
 	//-------------------------------------------
 	// RESET DCC STATUS
 	memset(&operations, 0, sizeof(operations));
-	memset(&operations, 0, sizeof(service));
+	memset(&service,    0, sizeof(service));
+	operations.dccCurrentBit = service.dccCurrentBit = 16;
 
 	enable_interrupts();
 }
@@ -204,20 +207,35 @@ void DccMngr::fini(void)
 struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address)
 {
 	int i;
-	struct dcc_buffer_struct *slot =
-			service_track ? service.pool : operations.pool;
+	struct dcc_buffer_struct *slot, *pool;
 
-	for(i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
-		if(address == slot->address || !slot->address) {
-			// deactivate slot
+	pool = service_track ? service.pool : operations.pool;
+
+	// invalidate pending instructions to this address
+	cli.debug("gating poting service_track=%b address=%x", service_track, address);
+	for(i = 0, slot = pool; i < DCC_BUFFER_POOL_SIZE; i++, slot++)
+		if(slot->reps > 0 && address == slot->address) {
+			cli.debug("invalidating #%d", i);
 			slot->reps = 0;
 			slot->address = 0xffff;
+		} else {
+			cli.debug("  pollo[%d] = %x %d %d",
+					i, slot->address, slot->len, slot->reps);
 		}
-		if(slot->reps < 0)
+
+	// find a free slot
+	for(i = 0, slot = pool; i < DCC_BUFFER_POOL_SIZE; i++, slot++)
+		if(slot->reps < 0) {
+			cli.debug("i want #%d", i);
 			break;
-	}
-	if(i >= DCC_BUFFER_POOL_SIZE)
+		}
+	cli.debug("i = %d", i);
+	if(i >= DCC_BUFFER_POOL_SIZE) {
+		cli.error("No free slots.");
 		return NULL;
+	}
+
+	// fill slot (but dont commit)
 	slot->address = address;
 	if(address & DCC_DECO_ADDR_14BIT) {
 		if((address & 0xff00) == 0xff00) {
@@ -241,7 +259,7 @@ bool DccMngr::slot_commit(struct dcc_buffer_struct *slot)
 
 	if(slot->len < 2 || slot->len >= DCC_MSG_MAX) {
 		cli.error("Bad message size");
-		return true;
+		return false;
 	}
 
 	// calculate checksum
@@ -263,7 +281,7 @@ bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
 	struct dcc_buffer_struct *slot;
 	byte *msg;
 
-	if(!(slot = slot_get(service_track ? service.pool : operations.pool, address)))
+	if(!(slot = slot_get(service_track, address)))
 		return false;
 	msg = slot->msg + slot->len;
 
@@ -280,17 +298,31 @@ bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
 
 void DccMngr::refresh(void)
 {
-#if 0
 	static int lolol = 0;
+
+	if(lolol++ >= 30) {
+		lolol = 0;
+
+		cli.debug("DCC msg=%p msg_pending=%d currbit=%d l_id=%d",
+				operations.msg,
+				operations.msg_pending,
+				operations.dccCurrentBit,
+				operations.dcc_last_msg_id);
+		for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
+			cli.debug("  pool[%d] = %x %d %d",
+					i,
+					operations.pool[i].address,
+					operations.pool[i].len,
+					operations.pool[i].reps);
+		}
+	}
+#if 0
 	static int dir = 20;
 
 	// update only each 20 iterations
-	if(lolol++ >= 20) {
 		dir = 0 - dir;
-		lolol = 0;
 		if(!set_speed(false, DCC_DECO_ADDR_GET7(3), DCC_DECO_SPEED_GET5(5)))
 			cli.debug("cannot send speed");
-	}
 #endif
 
 	// warn about excesive latencies

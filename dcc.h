@@ -39,7 +39,7 @@ struct dcc_buffer_struct {
   byte      msg[DCC_MSG_MAX];
   uint16_t  address;
   uint8_t   len;
-  uint8_t   reps;
+  int8_t    reps;
 };
 
 struct dcc_state {
@@ -61,13 +61,33 @@ struct dcc_deco {
 	#define DCC_DECO_SPEED_4BIT 0x0000
 	#define DCC_DECO_SPEED_5BIT 0x0100
 	#define DCC_DECO_SPEED_7BIT 0x0200
+	#define DCC_DECO_SPEED_BAD  0xffff
 	#define DCC_DECO_SPEED_MASK 0xff00
 };
 
-#define DCC_DECO_SPEED_GET7(x)		(((x) & 0x00ff) | DCC_DECO_SPEED_7BIT)
-#define DCC_DECO_SPEED_GET5(x)		(((x) & 0x003f) | DCC_DECO_SPEED_5BIT)
-#define DCC_DECO_SPEED_GET4(x,l)	(((x) & 0x000f) | DCC_DECO_SPEED_4BIT \
-					| ((l) ? 0x0010 : 0x0000))
+static inline uint16_t DCC_DECO_SPEED_GET7(int16_t s)
+{
+	uint16_t __x = s;
+	if(s < -127 || s > 127)
+		return DCC_DECO_SPEED_BAD;
+	return ((__x & 0x80) ? ((~__x + 1) & 0x7f) | 0x80 : __x);
+}
+static inline uint16_t DCC_DECO_SPEED_GET5(int16_t s)
+{
+	uint16_t __x = s;
+	if(s < -31 || s > 31)
+		return DCC_DECO_SPEED_BAD;
+	return ((__x & 0x80) ? ((~__x + 1) & 0x1f) | 0x20 : __x);
+}
+static inline uint16_t DCC_DECO_SPEED_GET4(int16_t s, bool l)
+{
+	uint16_t __x = s;
+	if(s < -15 || s > 15)
+		return DCC_DECO_SPEED_BAD;
+	return ((__x & 0x80) ? ((~__x + 1) & 0x0f) | 0x20 : __x)
+		| (l ? 0x10 : 0x00);
+}
+
 #define DCC_DECO_ADDR_GET7(x)           ((x) & 0x7f)
 #define DCC_DECO_ADDR_GET14(x)          (((x) & 0xc000) | 0xc000)
 
