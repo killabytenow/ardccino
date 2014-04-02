@@ -495,16 +495,8 @@ int Cli::execute_booster(char **token, char ntokens)
 	return CLI_ERR_OK;
 }
 
-// PENDING COMMANDS
-// COMMAND: dcc mode (pass_through|stateful)
-// COMMAND: dcc [!] <n> f <f> (on|off) [acked]
-// COMMAND: dcc [!] <n> analog <f> <v> [acked]
-// COMMAND: dcc [!] <n> ack (service|railcom|off)
-// COMMAND: dcc [!] <n> send [service] command <bytes...> [acked]
-// COMMAND: dcc [!] <n> read <v> [mode (paged|direct)]
-
-// COMMAND: dcc [!] [<n>] speed [4bit|5bit|7bit] [light (on|off)] [+-]<v> [acked]
-int Cli::execute_dcc_speed(char **token, char ntokens, bool service_track, uint16_t address)
+// COMMAND: <<trg_spec>> speed [4bit|5bit|7bit] [light (on|off)] [+-]<v> [acked]
+int Cli::execute_dcc_cmd_speed(char **token, char ntokens, bool service_track, uint16_t address)
 {
 	uint16_t speed = 0;
 	int st;
@@ -577,57 +569,88 @@ speed:
 	return CLI_ERR_OK;
 }
 
-int Cli::execute_dcc(char **token, char ntokens)
+// PENDING COMMANDS
+// COMMAND: <<trg_spec>> f <f> (on|off) [acked]
+// COMMAND: <<trg_spec>> analog <f> <v> [acked]
+// COMMAND: <<trg_spec>> ack (service|railcom|off)
+// COMMAND: <<trg_spec>> send [service] command <bytes...> [acked]
+// COMMAND: <<trg_spec>> read <v> [mode (paged|direct)]
+int Cli::execute_dcc_cmd(char **token, char ntokens)
 {
-	bool service_track = false;
-	uint16_t address, address_t;
+	bool service_track;
+	uint16_t address;
+
+	if(!dcc.enabled())
+		return CLI_ERR_BAD_MODE;
 
 	// command addressed to service track?
-	if(token[0][0] == '!') {
-		service_track = true;
-		if(!token[0][1]) {
-			token++;
-			ntokens--;
-		} else
-			token[0]++;
-	}
+	service_track = token[0][0] == '!';
+	if(!token[0][1]) {
+		token++;
+		ntokens--;
+	} else
+		token[0]++;
 	if(!ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
 	// decide address type
-	if(token[0][0] == '-' || token[0][0] == '+') {
-		address_t = token[0][0] == '-' ? DCC_DECO_ADDR_7BIT : DCC_DECO_ADDR_14BIT;
+	if(token[0][0] == '@') {
+		// broadcast
+		address = DCC_DECO_ADDR_BROADCAST;
 		if(!token[0][1]) {
 			token++;
 			ntokens--;
 		} else
 			token[0]++;
 	} else {
-		address_t = dcc.default_addr_type;
-	}
-	if(!ntokens)
-		return CLI_ERR_NEED_MORE_PARAMS;
-
-	// broadcast or directed message?
-	if(parse_unsigned(*token, &address)) {
+		int8_t address_t;
+		switch(token[0][0]) {
+		case '-':
+			// 7bit forced
+			address_t = DCC_ADDR_TYPE_7BIT;
+			token[0]++;
+			break;
+		case '+':
+			address_t = DCC_ADDR_TYPE_14BIT;
+			token[0]++;
+			break;
+		default:
+			address_t = DCC_ADDR_TYPE_NONE;
+		}
+		if(!parse_unsigned(*token, &address))
+			return CLI_ERR_BAD_SYNTAX;
+		address = dcc.get_address(address, address_t);
 		token++;
 		ntokens--;
-#warning "TODO: check address"
-		if(address != 0)
-			address |= address_t;
-	} else {
-		address = 0; // broadcast
 	}
+	if(address == DCC_DECO_ADDR_BAD)
+		return CLI_ERR_OUT_OF_BOUNDS;
+
+	// move to command and process it
 	if(!ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
-
-	cli.debug("service_track=%b address=%x", service_track, address);
 
 	// process dcc command
 	switch(parse_token(*token)) {
+	case CLI_TOKEN_SPEED:
+		return execute_dcc_cmd_speed(token+1, ntokens-1, service_track, address);
+
+	default:
+		return CLI_ERR_NOT_IMPLEMENTED;
+	}
+
+	return CLI_ERR_OK;
+}
+
+// PENDING COMMANDS
+// COMMAND: dcc mode (pass_through|stateful)
+int Cli::execute_dcc(char **token, char ntokens)
+{
+	if(!dcc.enabled())
+		return CLI_ERR_BAD_MODE;
+
+	switch(parse_token(*token)) {
 	case CLI_TOKEN_ADDRESS:
-		if(address || service_track)
-			return CLI_ERR_BAD_SYNTAX;
 		if(ntokens < 2)
 			return CLI_ERR_NEED_MORE_PARAMS;
 		if(ntokens > 2)
@@ -635,19 +658,20 @@ int Cli::execute_dcc(char **token, char ntokens)
 		switch(parse_token(token[1])) {
 		case CLI_TOKEN_ADVANCED:
 			cli.info("Using 4-digit (14bit) addresses by default.");
-			dcc.default_addr_type = DCC_DECO_ADDR_14BIT;
+			dcc.default_addr_type = DCC_ADDR_TYPE_14BIT;
 			break;
 		case CLI_TOKEN_NORMAL:
 			cli.info("Using 2-digit (7bit) addresses by default.");
-			dcc.default_addr_type = DCC_DECO_ADDR_7BIT;
+			dcc.default_addr_type = DCC_ADDR_TYPE_7BIT;
+			break;
+		case CLI_TOKEN_AUTO:
+			cli.info("Using auto-detect address algorithm.");
+			dcc.default_addr_type = DCC_ADDR_TYPE_AUTO;
 			break;
 		default:
 			return CLI_ERR_BAD_SYNTAX;
 		}
 		break;
-
-	case CLI_TOKEN_SPEED:
-		return execute_dcc_speed(token+1, ntokens-1, service_track, address);
 
 	default:
 		return CLI_ERR_NOT_IMPLEMENTED;
@@ -693,6 +717,9 @@ int Cli::execute(char **token, char ntokens)
 		return execute_booster(token, ntokens);
 	// other
 	default:
+		// DIRECTED DCC MESSAGE
+		if(token[0][0] == '@' || token[0][0] == '!')
+			return execute_dcc_cmd(token, ntokens);
 		return CLI_ERR_UNKNOWN_COMMAND;
 	}
 
@@ -780,7 +807,7 @@ ojete:
 				goto ojete;
 			}
 			break;
-		case '9':
+		case 9:
 			break;
 		default:
 #ifdef SIMULATOR

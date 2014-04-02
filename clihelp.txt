@@ -18,6 +18,9 @@ PWM MODE:
 
 DCC MODE:
 	dcc
-	dcc address (advanced|normal)
-	dcc mode (pass_through|stateful)
-	dcc [!] [<n>] speed [4bit|5bit|7bit] [light (on|off)] <v>
+	dcc address (advanced|normal|auto)
+
+DCC COMMANDS
+	<<trg_spec>> speed [4bit|5bit|7bit] [light (on|off)] <v>
+  where:
+    <<trg_spec>>: [@!] (@|[+-]<address>)

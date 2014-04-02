@@ -64,7 +64,8 @@ class Cli {
 		int parse_token(char *token, int16_t *si);
 		int execute_booster(char **token, char ntokens);
 		int execute_dcc(char **token, char ntokens);
-		int execute_dcc_speed(char **token, char ntokens, bool service_track, uint16_t address);
+		int execute_dcc_cmd(char **token, char ntokens);
+		int execute_dcc_cmd_speed(char **token, char ntokens, bool service_track, uint16_t address);
 		int execute(char **token, char ntokens);
 		void parse(char *buffer);
 
