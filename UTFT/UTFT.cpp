@@ -281,6 +281,13 @@ UTFT::UTFT(byte model, int RS, int WR,int CS, int RST, int SER)
 		pinMode(CS,OUTPUT);
 		pinMode(RST,OUTPUT);
 	}
+#else
+	// COMPILER HACK: silence unused parameter warnings
+	UNUSED(RS);
+	UNUSED(WR);
+	UNUSED(CS);
+	UNUSED(RST);
+	UNUSED(SER);
 #endif
 }
 
@@ -1385,6 +1392,8 @@ void UTFT::setContrast(char c)
 	}
 	sbi(P_CS, B_CS);
 #else
+	// COMPILER HACK: silence unused parameter warnings
+	UNUSED(c);
 #endif
 }
 
