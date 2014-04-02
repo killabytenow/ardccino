@@ -155,7 +155,7 @@ DCC COMMANDS
   3. If address is preceeded by a plus sign (`+`) command is sent using an
      advanced address (4-digit/14bit).
 
-  4. If address is preceeded by a underscore sign (`_`) command is sent using a
+  4. If address is preceeded by a minus sign (`-`) command is sent using a
      short address (2-digit/7bit).
 
 `dcc`
