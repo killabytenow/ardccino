@@ -55,8 +55,10 @@ struct dcc_state {
 
 struct dcc_deco {
 	uint16_t	addr;
-	#define DCC_DECO_ADDR_7BIT  0x0000
-	#define DCC_DECO_ADDR_14BIT 0xc000
+	#define DCC_DECO_ADDR_7BIT  	0x0000
+	#define DCC_DECO_ADDR_14BIT 	0xc000
+	#define DCC_DECO_ADDR_BAD   	0xffff
+	#define DCC_DECO_ADDR_BROADCAST	(DCC_DECO_ADDR_7BIT | 0x0000)
 	uint16_t	speed;
 	#define DCC_DECO_SPEED_4BIT 0x0000
 	#define DCC_DECO_SPEED_5BIT 0x0100
@@ -96,7 +98,11 @@ public:
 	int8_t   service_booster;
 	struct   dcc_state operations;
 	struct   dcc_state service;
-	uint16_t default_addr_type;
+	int8_t   default_addr_type;
+#define DCC_ADDR_TYPE_NONE	0
+#define DCC_ADDR_TYPE_7BIT	1
+#define DCC_ADDR_TYPE_14BIT	2
+#define DCC_ADDR_TYPE_AUTO	3
 
 	void isr(struct dcc_state *ds, volatile uint16_t *OCR1x);
 
@@ -110,6 +116,8 @@ public:
 	struct dcc_buffer_struct *slot_get(bool service_track, uint16_t address);
 	bool slot_commit(struct dcc_buffer_struct *slot);
 
+	// dcc methods
+	uint16_t get_address(uint16_t address, uint8_t addr_type);
 	bool set_speed(bool service_track, uint16_t address, uint16_t speed);
 };
 

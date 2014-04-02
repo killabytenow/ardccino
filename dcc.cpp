@@ -136,8 +136,6 @@ DccMngr::DccMngr(int8_t service_booster)
 
 void DccMngr::init(void)
 {
-	cli.debug("Initializing DCC.");
-
 	disable_interrupts();
 
 #ifndef SIMULATOR
@@ -204,6 +202,40 @@ void DccMngr::fini(void)
 	enable_interrupts();
 }
 
+uint16_t DccMngr::get_address(uint16_t address, uint8_t addr_type)
+{
+	if(addr_type == DCC_ADDR_TYPE_NONE)
+		addr_type = default_addr_type;
+	
+again:
+	switch(addr_type) {
+	default:
+	case DCC_ADDR_TYPE_7BIT:
+		if(address > 0x7f || !address) {
+			cli.error("Invalid 7bit address (%d).", address);
+			return DCC_DECO_ADDR_BAD;
+		}
+		address |= DCC_DECO_ADDR_7BIT;
+		break;
+
+	case DCC_ADDR_TYPE_14BIT:
+		if(address > 0x27ff) {
+			cli.error("Invalid 14-bit address (%d)", address);
+			return DCC_DECO_ADDR_BAD;
+		}
+		address |= DCC_DECO_ADDR_14BIT;
+		break;
+
+	case DCC_ADDR_TYPE_AUTO:
+		addr_type = address < 0x80 && address != 0
+				? DCC_ADDR_TYPE_7BIT
+				: DCC_ADDR_TYPE_14BIT;
+		goto again;
+	}
+
+	return address;
+}
+
 struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address)
 {
 	int i;
@@ -212,24 +244,16 @@ struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address
 	pool = service_track ? service.pool : operations.pool;
 
 	// invalidate pending instructions to this address
-	cli.debug("gating poting service_track=%b address=%x", service_track, address);
 	for(i = 0, slot = pool; i < DCC_BUFFER_POOL_SIZE; i++, slot++)
 		if(slot->reps > 0 && address == slot->address) {
-			cli.debug("invalidating #%d", i);
 			slot->reps = 0;
 			slot->address = 0xffff;
-		} else {
-			cli.debug("  pollo[%d] = %x %d %d",
-					i, slot->address, slot->len, slot->reps);
 		}
 
 	// find a free slot
 	for(i = 0, slot = pool; i < DCC_BUFFER_POOL_SIZE; i++, slot++)
-		if(slot->reps < 0) {
-			cli.debug("i want #%d", i);
+		if(slot->reps < 0)
 			break;
-		}
-	cli.debug("i = %d", i);
 	if(i >= DCC_BUFFER_POOL_SIZE) {
 		cli.error("No free slots.");
 		return NULL;
@@ -238,11 +262,6 @@ struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address
 	// fill slot (but dont commit)
 	slot->address = address;
 	if(address & DCC_DECO_ADDR_14BIT) {
-		if((address & 0xff00) == 0xff00) {
-			slot->reps = -1;
-			cli.error("Bad 14-bit address %x", address);
-			return NULL;
-		}
 		slot->msg[0] = address & 0x00ff;
 		slot->msg[1] = address >> 8;
 		slot->len = 2;
@@ -298,8 +317,8 @@ bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
 
 void DccMngr::refresh(void)
 {
+#if 0
 	static int lolol = 0;
-
 	if(lolol++ >= 30) {
 		lolol = 0;
 
@@ -315,14 +334,14 @@ void DccMngr::refresh(void)
 					operations.pool[i].len,
 					operations.pool[i].reps);
 		}
-	}
-#if 0
-	static int dir = 20;
 
-	// update only each 20 iterations
+#if 0
+		static int dir = 20;
 		dir = 0 - dir;
 		if(!set_speed(false, DCC_DECO_ADDR_GET7(3), DCC_DECO_SPEED_GET5(5)))
 			cli.debug("cannot send speed");
+#endif
+	}
 #endif
 
 	// warn about excesive latencies
