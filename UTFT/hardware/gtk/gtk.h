@@ -14,7 +14,7 @@
 
 static gboolean do_configure_event(
        GtkWidget         *widget,
-       GdkEventConfigure *event,
+       GdkEventConfigure *, // event - unused parameter
        gpointer           data)
 {
 	UTFT *utft = (UTFT *) data;
@@ -35,7 +35,7 @@ static gboolean do_configure_event(
 }
 
 static gboolean do_draw_event(
-	GtkWidget      *widget, 
+	GtkWidget      *, // widget - unused parameter
 	cairo_t        *cr,
 	gpointer        data)
 {
