@@ -53,7 +53,7 @@ void BoosterMngr::refresh_current(void)
 
 Booster *BoosterMngr::booster(uint8_t booster)
 {
-	if(booster < 0 || booster > BoosterMngr::nboosters)
+	if(booster > BoosterMngr::nboosters)
 		cli.fatal("Booster #%d out of bounds", booster);
 	return BoosterMngr::boosters + booster;
 }
