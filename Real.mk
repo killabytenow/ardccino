@@ -26,6 +26,3 @@
 
 include $(ARDUINO_DIR)/Arduino.mk
 
-#auto_tokens.h auto_clierrs.h auto_banner_wide.h auto_banner.h : gen_code.pl tokens.list clierrs.list banner.txt banner_wide.txt
-#	./gen_code.pl
-
