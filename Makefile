@@ -36,7 +36,7 @@
 ###############################################################################
 
 export ARDUINO_DIR            = /usr/share/arduino/
-export ARDMK_DIR              = /usr
+export ARDMK_DIR              = $(ARDUINO_DIR)
 export AVR_TOOLS_DIR          = /usr
 export TARGET                 = Ardccino
 export ARDUINO_LIBS           = UTFT
