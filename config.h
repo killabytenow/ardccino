@@ -26,6 +26,16 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#define VOID_PARAM_EXPANSION(X)	X ## 1
+#define VOID_PARAM(X)		(VOID_PARAM_EXPANSION(X) == 1)
+
+#if defined(__DECLARE_GLOBALS__) && VOID_PARAM(__DECLARE_GLOBALS__)
+#  undef __DECLARE_GLOBALS__
+#endif
+
+#if defined(SIMULATOR) && VOID_PARAM(SIMULATOR)
+#  undef SIMULATOR
+#endif
 #ifndef SIMULATOR
 #  include <Arduino.h>
 #  include <avr/interrupt.h>
@@ -106,14 +116,16 @@ Booster boosters[] = {
 //
 
 #define CLI_ENABLED 1
+#define CLI_SERIAL_SPEED  115200
+#define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
 
+#if defined(CLI_ENABLED) && VOID_PARAM(CLI_ENABLED)
+#  undef CLI_ENABLED
+#endif
 #ifdef CLI_ENABLED
 #  include "cli.h"
-#  define CLI_SERIAL_SPEED  115200
-#  define CLI_PROMPT        ANSI_SGR_RESET ANSI_SGR_BOLD "ardccino" ANSI_SGR_BOLD_OFF ">"
 #  ifdef __DECLARE_GLOBALS__
 Cli cli = Cli();
-#  else
 #  endif
 #endif
 
@@ -124,8 +136,11 @@ Cli cli = Cli();
 // not need to be edited.
 //
 
-#define ENABLE_SCREEN 1
+//#define ENABLE_SCREEN 1
 
+#if defined(ENABLE_SCREEN) && VOID_PARAM(ENABLE_SCREEN)
+#  undef ENABLE_SCREEN
+#endif
 #ifdef ENABLE_SCREEN
 #  ifdef __DECLARE_GLOBALS__
 
@@ -150,13 +165,14 @@ extern UTFT tft;
 //
 
 #define JOY_ENABLED 1
+#define JOY_PIN_AXIS_X    A0
+#define JOY_PIN_AXIS_Y    A1
+#define JOY_PIN_BUTTON    A2
+#define JOY_RANGE_AXIS_X  1023
+#define JOY_RANGE_AXIS_Y  1023
 
-#ifdef JOY_ENABLED
-#  define JOY_PIN_AXIS_X    A0
-#  define JOY_PIN_AXIS_Y    A1
-#  define JOY_PIN_BUTTON    A2
-#  define JOY_RANGE_AXIS_X  1023
-#  define JOY_RANGE_AXIS_Y  1023
+#if defined(JOY_ENABLED) && VOID_PARAM(JOY_ENABLED)
+#  undef JOY_ENABLED
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
