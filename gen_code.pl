@@ -176,7 +176,7 @@ sub build_tokens_h__print
 	print $fo "	const char * const token;\n";
 	print $fo "	uint8_t            minlen;\n";
 	print $fo "} cli_token_t;\n\n";
-	print $fo "cli_token_t cli_tokens[] = {\n";
+	print $fo "const cli_token_t cli_tokens[] = {\n";
 	build_tokens_h__print_symtab_r($t, $fo);
 	print $fo "};\n";
 }
