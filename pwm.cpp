@@ -48,6 +48,7 @@ void PwmMngr::init(void)
 			cli.fatal("Cannot figure how to configure output pin for PWM output");
 		}
 	}
+	cli.debug("pwm: timers mask = %x", timers);
 
 	disable_interrupts();
 
@@ -56,17 +57,28 @@ void PwmMngr::init(void)
 	if(timers & (1 << 1)) {
 		// timer 1
 		TCCR1A = (TCCR1A & 0b00001100)
-		       | 0b00000001;  // Fast PWM 8-bit (!WGM11, WGM10)
+			              // 0b00______ Normal port operation, OC1A disconnected
+			              // 0b__00____ Normal port operation, OC1B disconnected
+			              // 0b____**__ Reserved
+			| 0b00000001; // 0b______01 Fast PWM 8-bit (!WGM13, WGM12, !WGM11, WGM10)
 		TCCR1B = (TCCR1B & 0b11100000)
-		       | 0x4          // clock prescaler 0x04 (16e6/256 = 62.5 khz)
-		       | 0b00001000;  // Fast PWM 8-bit (!WGM13, WGM12)
+		                      // 0b***_____ ICNC1, ICES1, Reserved
+		       | 0x4          // 0b_____100 clock prescaler 0x04 (16e6/256 = 62.5 khz)
+		       | 0b00001000;  // 0b___01___ Fast PWM 8-bit (!WGM13, WGM12, !WGM11, WGM10)
 		OCR1A = OCR1B = 0;    // set compare registers to 0
 		TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
+		                      // 0b**_**___ Reserved
+				      // 0b__0_____ Timer/Counter1, input capture interrupt enable
+				      // 0b_____0__ OCIE1B: Timer/Counter1, output compare B match interrupt enable
+				      // 0b______0_ OCIE1A: Timer/Counter1, output compare A match interrupt enable
+				      // 0b_______0 TOIE1: Timer/Counter1, overflow interrupt enable
 	}
 
 	if(timers & (1 << 2)) {
 		// timer 2
 		TCCR2A = (TCCR2A & 0b00001100)
+			//0b____**__   // reserved
+			//0b____**__   // reserved
 		       | 0b00000011;  // Fast PWM (WGM21, WGM20)
 		TCCR2B = (TCCR2B & 0b11110000)
 		       | 0x6          // clock prescaler 0x6 (16e6/256 = 62.5 khz)
@@ -93,10 +105,18 @@ void PwmMngr::init(void)
 		BoosterMngr::boosters[b].reset();
 
 	enable_interrupts();
+
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		BoosterMngr::boosters[b].on();
 }
 
 void PwmMngr::fini(void)
 {
+	cli.debug("Disabling PWM");
+
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		BoosterMngr::boosters[b].off();
+
 	disable_interrupts();
 
 	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
@@ -155,7 +175,9 @@ void PwmMngr::booster_refresh(Booster *b)
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->curr_power > 0);
 #ifndef SIMULATOR
-	unsigned char pwmvalue = b->min_power + abs(b->curr_power);
+	unsigned char pwmvalue = b->min_power > abs(b->curr_power)
+					? b->min_power
+					: abs(b->curr_power);
 	switch(b->pwmSignalPin) {
 	case  3: OCR2B = pwmvalue; break;
 	case  9: OCR1A = pwmvalue; break;
@@ -202,14 +224,14 @@ void PwmMngr::speed(int b, int s)
 
 void PwmMngr::stop(int b)
 {
-  speed(b, 0);
+	speed(b, 0);
 }
 
 void PwmMngr::switch_dir(int b)
 {
-  if(b < 0 || b > BoosterMngr::nboosters)
-    cli.fatal("switch_dir: pwm out of bounds.");
+	if(b < 0 || b > BoosterMngr::nboosters)
+		cli.fatal("switch_dir: pwm out of bounds.");
     
-  BoosterMngr::boosters[b].trgt_power = 0 - BoosterMngr::boosters[b].trgt_power;
+	BoosterMngr::boosters[b].trgt_power = 0 - BoosterMngr::boosters[b].trgt_power;
 }
 
