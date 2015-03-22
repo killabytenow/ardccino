@@ -57,12 +57,12 @@ Booster::Booster(const char *name,
 void Booster::reset(void)
 {
 	// set power to 0
-	trgt_power   = 0;
-	curr_power   = 0;
+	trgt_power = 0;
+	curr_power = 0;
 	curr_accel = 0;
 
 	// enable booster
-	enabled      = true;
+	enabled = true;
 
 	// reset booster (with a 10 ms pulse)
 	digitalWrite(rstSignalPin, HIGH);
@@ -72,11 +72,16 @@ void Booster::reset(void)
 
 void Booster::on(void)
 {
+	curr_power = curr_accel = 0;
+	trgt_power = this->min_power;
 	enabled = true;
 }
 
 void Booster::off(void)
 {
+	trgt_power = 0;
+	curr_power = 0;
+	curr_accel = 0;
 	enabled = false;
 }
 
