@@ -49,21 +49,36 @@ export AVRDUDE_ARD_BAUDRATE   = 115200
 export AVRDUDE_ARD_PROGRAMMER = wiring
 export USER_LIB_PATH          = ./
 export MONITOR_BAUDRATE       = 115200
-export ARD_RESET_OPTS         = $(ARDUINO_PORT)
+#export ARD_RESET_OPTS         = $(ARDUINO_PORT)
 
 export EXTRA_CFLAGS=-Wall -Wextra
 export EXTRA_CXXFLAGS=-Wall -Wextra
 
-.PHONY : simulator real clean clean-simulator clean-real depends reset raw_upload show_boards monitor
+.PHONY : simulator real clean clean-simulator clean-real depends reset raw_upload show_boards monitor .FORCE
 
-all : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h 
+all : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h  clihelp.h auto_build_date.h
 	$(MAKE) -f Real.mk
 
 simulator : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
 	$(MAKE) -f Simulator.mk
 
-auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h clihelp.h : tokens.list clierrs.list banner.txt banner_wide.txt clihelp.txt gen_code.pl
-	./gen_code.pl
+auto_tokens.h : tokens.list gen_code.pl
+	./gen_code.pl tokens
+
+auto_clierrs.h : clierrs.list gen_code.pl
+	./gen_code.pl clierrs
+
+auto_banner.h : banner.txt gen_code.pl
+	./gen_code.pl banner
+
+auto_banner_wide.h : banner_wide.txt gen_code.pl
+	./gen_code.pl banner_wide
+
+clihelp.h : clihelp.txt gen_code.pl
+	./gen_code.pl clihelp
+
+auto_build_date.h : .FORCE
+	./gen_code.pl build_date
 
 clean-simulator :
 	$(MAKE) -f Simulator.mk clean

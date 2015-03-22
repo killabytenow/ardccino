@@ -42,6 +42,7 @@
 #include "auto_clierrs.h"
 #include "auto_clihelp.h"
 #include "auto_tokens.h"
+#include "auto_build_date.h"
 
 Cli::Cli(void)
 {
@@ -204,7 +205,10 @@ void Cli::_print_text(char **text, int l)
 
 void Cli::about(void)
 {
+	char buffer[100];
 	_print_text((char **) banner_wide, (signed) (sizeof(banner_wide) / sizeof(char *)));
+	strcpy_P(buffer, (char *) build_date);
+	info(buffer);
 }
 
 void Cli::help(void)

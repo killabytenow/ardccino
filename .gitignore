@@ -1,5 +1,6 @@
 auto_banner.h
 auto_banner_wide.h
+auto_build_date.h
 auto_clierrs.h
 auto_clihelp.h
 auto_tokens.h
