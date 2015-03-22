@@ -27,6 +27,82 @@
 #include "pwm.h"
 #include "interrupts.h"
 
+static int get_timer(uint8_t pin)
+{
+	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
+
+	switch(timer) {
+	case TIMER1A:
+	case TIMER1B:
+		timer = (1 << 1);
+		break;
+	case TIMER2:
+	case TIMER2A:
+	case TIMER2B:
+		timer = (1 << 2);
+		break;
+#if defined (__AVR_ATmega2560__)
+	case TIMER3A:
+	case TIMER3B:
+	case TIMER3C:
+		timer = (1 << 3);
+		break;
+#endif
+	case NOT_ON_TIMER:
+		cli.fatal("get_timer(): Pin %d cannot be used for PWM output.", pin);
+	default:
+		cli.fatal("get_timer(): Pin %d uses unknown timer (%d)", pin, timer);
+	}
+	return timer;
+}
+
+static void enable_timer_pin(uint8_t pin)
+{
+	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
+
+	switch(timer) {
+	case TIMER1A: TCCR1A |= 0b10000000; break; // Clear OC1A on cmp match
+	case TIMER1B: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
+#if defined(__AVR_ATmega8__)
+	case TIMER2:  TCCR2  |= 0b10000000; break; // Clear OC2  on cmp match
+#endif
+	case TIMER2A: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
+	case TIMER2B: TCCR2A |= 0b00100000; break; // Clear OC2B on cmp match
+#if defined (__AVR_ATmega2560__)
+	case TIMER3A: TCCR3A |= 0b10000000; break; // Clear OC3A on cmp match
+	case TIMER3B: TCCR3A |= 0b00100000; break; // Clear OC3B on cmp match
+	case TIMER3C: TCCR3A |= 0b00001000; break; // Clear OC3C on cmp match
+#endif
+	case NOT_ON_TIMER:
+		cli.fatal("enable_timer_pin(): Pin %d cannot be used for PWM output.", pin);
+	default:
+		cli.fatal("enable_timer_pin(): Pin %d uses unknown timer (%d)", pin, timer);
+	}
+}
+
+static void set_timer_register(uint8_t pin, uint8_t pwm)
+{
+	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
+
+#ifndef SIMULATOR
+	switch(timer) {
+	case TIMER1A: OCR1A = pwm; break;
+	case TIMER1B: OCR1B = pwm; break;
+#if defined(__AVR_ATmega8__)
+	case TIMER2:  OCR2  = pwm; break;
+#endif
+	case TIMER2A: OCR2A = pwm; break;
+	case TIMER2B: OCR2B = pwm; break;
+#if defined (__AVR_ATmega2560__)
+	case TIMER3A: OCR3A = pwm; break;
+	case TIMER3B: OCR3B = pwm; break;
+	case TIMER3C: OCR3C = pwm; break;
+#endif
+	default: cli.fatal("Cannot write PWM output to pin %d", pin);
+	}
+#endif
+}
+
 void PwmMngr::init(void)
 {
 	uint8_t timers = 0;
@@ -34,21 +110,9 @@ void PwmMngr::init(void)
 	cli.debug("Initializing PWM.");
 
 	// discover which timers must be configured
-	for(int b = 0; b < BoosterMngr::nboosters; b++) {
-		switch(BoosterMngr::boosters[b].pwmSignalPin) {
-		case 9:
-		case 10:
-			timers |= (1 << 1);
-			break;
-		case 3:
-		case 11:
-			timers |= (1 << 2);
-			break;
-		default:
-			cli.fatal("Cannot figure how to configure output pin for PWM output");
-		}
-	}
-	cli.debug("pwm: timers mask = %x", timers);
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		timers |= get_timer(BoosterMngr::boosters[b].pwmSignalPin);
+	cli.debug("  timers %x", timers);
 
 	disable_interrupts();
 
@@ -62,41 +126,59 @@ void PwmMngr::init(void)
 			              // 0b____**__ Reserved
 			| 0b00000001; // 0b______01 Fast PWM 8-bit (!WGM13, WGM12, !WGM11, WGM10)
 		TCCR1B = (TCCR1B & 0b11100000)
-		                      // 0b***_____ ICNC1, ICES1, Reserved
-		       | 0x4          // 0b_____100 clock prescaler 0x04 (16e6/256 = 62.5 khz)
-		       | 0b00001000;  // 0b___01___ Fast PWM 8-bit (!WGM13, WGM12, !WGM11, WGM10)
-		OCR1A = OCR1B = 0;    // set compare registers to 0
+			              // 0b***_____ ICNC1, ICES1, Reserved
+			| 0b00001000  // 0b___01___ Fast PWM 8-bit (!WGM13, WGM12, !WGM11, WGM10)
+			| 0x04;       // 0b_____100 clock prescaler 0x04 (16e6/256 = 62.5 khz)
 		TIMSK1 &= 0b11011000; // disable all timer 1 interrupts
 		                      // 0b**_**___ Reserved
-				      // 0b__0_____ Timer/Counter1, input capture interrupt enable
-				      // 0b_____0__ OCIE1B: Timer/Counter1, output compare B match interrupt enable
-				      // 0b______0_ OCIE1A: Timer/Counter1, output compare A match interrupt enable
-				      // 0b_______0 TOIE1: Timer/Counter1, overflow interrupt enable
+				      // 0b__0_____ input capture interrupt enable
+				      // 0b_____0__ OCIE1B: output compare B match interrupt enable
+				      // 0b______0_ OCIE1A: output compare A match interrupt enable
+				      // 0b_______0 TOIE1: overflow interrupt enable
+		OCR1A = OCR1B = 0;
 	}
 
 	if(timers & (1 << 2)) {
 		// timer 2
 		TCCR2A = (TCCR2A & 0b00001100)
-			//0b____**__   // reserved
-			//0b____**__   // reserved
-		       | 0b00000011;  // Fast PWM (WGM21, WGM20)
+			              // 0b00______ Normal port operation, OC2A disconnected
+			              // 0b__00____ Normal port operation, OC2B disconnected
+			              // 0b____**__ reserved
+			| 0b00000011; // 0b00000011 Fast PWM (!WGM22, WGM21, WGM20)
 		TCCR2B = (TCCR2B & 0b11110000)
-		       | 0x6          // clock prescaler 0x6 (16e6/256 = 62.5 khz)
-		       | 0b00000000;  // Fast PWM (!WGM22)
-		OCR2A = OCR2B = 0;    // set compare registers to 0
-		TIMSK2 &= 0b11111000; // disable all timer 2 interrupts
+			               // 0b****____ FOC2A, FOC2B, Reserved, Reserved
+			| 0b00000000   // 0b____0___ Fast PWM (!WGM22, WGM21, WGM20)
+			| 0x6;         // 0b_____110 clock prescaler 0x6 (16e6/256 = 62.5 khz)
+		TIMSK2 &= 0b11111000;  // disable all timer 2 interrupts
+		OCR2A = OCR2B = 0;
 	}
 
-	// CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
-	for(int b = 0; b < BoosterMngr::nboosters; b++) {
-		switch(BoosterMngr::boosters[b].pwmSignalPin) {
-		case 9:  TCCR1A |= 0b10000000; break; // Clear OC1A on cmp match
-		case 10: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
-		case 11: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
-		case 3:  TCCR2A |= 0b00100000; break; // Clear OC2B on cmp match
-		default: cli.fatal("Cannot configure output pin for PWM output");
-		}
+#if defined (__AVR_ATmega2560__)
+	if(timers & (1 << 3)) {
+		// timer 1
+		TCCR3A = (TCCR3A & 0b00000000)
+			              // 0b00______ Normal port operation, OC3A disconnected
+			              // 0b__00____ Normal port operation, OC3B disconnected
+			              // 0b____00__ Normal port operation, OC3C disconnected
+			| 0b00000001; // 0b______01 Fast PWM 8-bit (!WGM33, WGM32, !WGM31, WGM30)
+		TCCR3B = (TCCR3B & 0b11100000)
+			              // 0b***_____ ICNC3, ICES3, Reserved
+			| 0b00001000  // 0b___01___ Fast PWM 8-bit (!WGM33, WGM32, !WGM31, WGM30)
+			| 0x04;       // 0b_____100 clock prescaler 0x04 (16e6/256 = 62.5 khz)
+		TIMSK3 &= 0b11010000; // disable all timer 1 interrupts
+		                      // 0b**_*____ Reserved
+				      // 0b__0_____ input capture interrupt enable
+				      // 0b____0___ OCIE3C: output compare B match interrupt enable
+				      // 0b_____0__ OCIE3B: output compare B match interrupt enable
+				      // 0b______0_ OCIE3A: output compare A match interrupt enable
+				      // 0b_______0 TOIE3: overflow interrupt enable
+		OCR3A = OCR3B = OCR3C = 0;
 	}
+#endif
+
+	// CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		enable_timer_pin(BoosterMngr::boosters[b].pwmSignalPin);
 #endif
 
 	//-------------------------------------------
@@ -121,10 +203,20 @@ void PwmMngr::fini(void)
 
 	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
 #ifndef SIMULATOR
-	TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
-	TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
-	OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
-	TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
+	// timer 1
+	TCCR1A = TCCR1A & 0b00001100; TCCR1B = TCCR1B & 0b11100000;
+	OCR1A = OCR1B = 0;
+	TIMSK1 &= 0b11011000;
+	// timer 2
+	TCCR2A = TCCR2A & 0b00001100; TCCR2B = TCCR2B & 0b11110000;
+	OCR2A = OCR2B = 0;
+	TIMSK2 &= 0b11111000;
+#if defined (__AVR_ATmega2560__)
+	// timer 3
+	TCCR3A = TCCR3A & 0b00000000; TCCR3B = TCCR3B & 0b11100000;
+	OCR3A = OCR3B = OCR3C = 0;
+	TIMSK3 &= 0b11010000;
+#endif
 #endif
 
 	enable_interrupts();
@@ -174,18 +266,10 @@ void PwmMngr::booster_refresh(Booster *b)
 
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->curr_power > 0);
-#ifndef SIMULATOR
 	unsigned char pwmvalue = b->min_power > abs(b->curr_power)
 					? b->min_power
 					: abs(b->curr_power);
-	switch(b->pwmSignalPin) {
-	case  3: OCR2B = pwmvalue; break;
-	case  9: OCR1A = pwmvalue; break;
-	case 10: OCR1B = pwmvalue; break;
-	case 11: OCR2A = pwmvalue; break;
-	default: cli.fatal("Cannot write PWM output to pin");
-	}
-#endif
+	set_timer_register(b->pwmSignalPin, pwmvalue);
 }
 
 void PwmMngr::refresh(void)
