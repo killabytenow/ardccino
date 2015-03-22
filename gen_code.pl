@@ -296,7 +296,7 @@ sub build_date_h
 	# print
 	$fo = create_header $file;
 
-	printf $fo "PROGMEM const char %s[] = \"Build date: %s\\n\";\n", $file, strftime("%d/%m/%Y %H:%M:%S", localtime);
+	printf $fo "PROGMEM const char %s[] = \"(built on %s)\\n\";\n", $file, strftime("%d/%m/%Y %H:%M:%S", localtime);
 	print $fo "\n";
 
 	close($fo);

@@ -28,6 +28,7 @@
 #define __DECLARE_GLOBALS__ 1
 #include "config.h"
 #include "hwgui.h"
+#include "auto_build_date.h"
 
 void setup(void)
 {
@@ -41,6 +42,11 @@ void setup(void)
 #ifdef CLI_ENABLED
 	cli.init();
 	cli.info("ardccino v1.0 ready");
+	{
+		char buffer[100];
+		strcpy_P(buffer, (char *) build_date);
+		cli.info(buffer);
+	}
 #endif
 #ifdef HWGUI_ENABLED
 	UIScreen::init(&ui_hello);
