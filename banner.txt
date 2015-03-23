@@ -9,7 +9,7 @@
 | P    W   W M   M /   DDD   CCC  CCC |
 |                                     |
 +-------------------------------------+
-(C) 2013-2014 Gerardo Garcia Pena
+(C) 2013-2015 Gerardo Garcia Pena
                <killabytenow@gmail.com>
 This program is  free software; you can
 redistribute  it and/or modify it under
