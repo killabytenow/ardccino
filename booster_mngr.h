@@ -29,10 +29,8 @@
 #include "booster.h"
 
 class BoosterMngr {
-private:
-	static BoosterMngr *current;
-
 public:
+	static BoosterMngr *current;
 	static Booster  *boosters;
 	static int       nboosters;
 
@@ -41,6 +39,12 @@ public:
 	virtual void init(void) = 0;
 	virtual void fini(void) = 0;
 	virtual void refresh(void) = 0;
+
+	virtual void on(uint8_t booster) = 0;
+	virtual void off(uint8_t booster) = 0;
+
+	void on_all();
+	void off_all();
 
 	BoosterMngr *enable(void);
 	int enabled(void);

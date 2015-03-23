@@ -64,3 +64,15 @@ void BoosterMngr::set_boosters(Booster *ba, int n)
 	BoosterMngr::nboosters = n;
 }
 
+void BoosterMngr::on_all(void)
+{
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		this->on(b);
+}
+
+void BoosterMngr::off_all(void)
+{
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		this->off(b);
+}
+

@@ -42,7 +42,9 @@ ISR(TIMER1_COMPA_vect)
 {
 	for(int i = 0; i < BoosterMngr::nboosters; i++)
 		if(i != dcc.service_booster)
-			digitalWrite(BoosterMngr::boosters[i].dirSignalPin, dcc.operations.dccZero);
+			digitalWrite(
+				BoosterMngr::boosters[i].dirSignalPin,
+				dcc.operations.dccZero && BoosterMngr::boosters[i].enabled);
 	dcc.isr(&dcc.operations, &OCR1A);
 
 	// Capture the current timer value (TCTNx) for debugging purposes. It
@@ -57,7 +59,9 @@ ISR(TIMER3_COMPA_vect)
 {
 	if(dcc.service_booster < 0)
 		return;
-	digitalWrite(BoosterMngr::boosters[dcc.service_booster].dirSignalPin, dcc.service.dccZero);
+	digitalWrite(
+		BoosterMngr::boosters[dcc.service_booster].dirSignalPin,
+		dcc.service.dccZero && BoosterMngr::boosters[dcc.service_booster].enabled);
 	dcc.isr(&dcc.service, &OCR3A);
 
 	// Capture the current timer value (TCTNx) for debugging purposes. It
@@ -68,8 +72,8 @@ ISR(TIMER3_COMPA_vect)
 		dcc.service.dcc_excesive_lat = lat;
 }
 
-//#define OCRXX *OCR1x
-#define OCRXX OCR1A
+#define OCRXX *OCR1x
+//#define OCRXX OCR1A
 void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 {
 	struct dcc_buffer_struct *cmsg;
@@ -130,12 +134,26 @@ DccMngr::DccMngr() : BoosterMngr()
 DccMngr::DccMngr(int8_t service_booster)
 	: BoosterMngr(), service_booster(service_booster)
 {
-	if(service_booster >= BoosterMngr::nboosters)
-		cli.fatal("service_booster id is above nboosters.");
+}
+
+static void booster_activate(uint8_t b)
+{
+	digitalWrite(
+		BoosterMngr::boosters[b].pwmSignalPin,
+		BoosterMngr::boosters[b].enabled);
+}
+
+static void booster_deactivate(uint8_t b)
+{
+	digitalWrite(BoosterMngr::boosters[b].dirSignalPin, 0);
+	digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, 0);
 }
 
 void DccMngr::init(void)
 {
+	if(service_booster >= BoosterMngr::nboosters)
+		cli.fatal("service_booster id is above nboosters.");
+
 	disable_interrupts();
 
 #ifndef SIMULATOR
@@ -148,7 +166,7 @@ void DccMngr::init(void)
 	       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
 	       | 0b00001000;    // Normal mode (!WGM13, WGM12)
 	OCR1B = 0;         // set compare registers
-	OCR1A = DCC_CTC_ZERO;
+	OCR1A = DCC_CTC_ONE;
 	TIMSK1 = (TIMSK1 & 0b11011000)
 	       | (1 << OCIE1A); // output cmp A match interrupt enable
 		 
@@ -168,7 +186,7 @@ void DccMngr::init(void)
 		       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
 		       | 0b00001000;    // Normal mode (!WGM13, WGM12)
 		OCR3B = 0xffff;         // set compare registers
-		OCR3A = DCC_CTC_ZERO;
+		OCR3A = DCC_CTC_ONE;
 		TIMSK3 = (TIMSK3 & 0b11011000)
 		       | (1 << OCIE3A); // output cmp A match interrupt enable
 	}
@@ -176,7 +194,7 @@ void DccMngr::init(void)
 
 	// SET PWM OUTPUTS TO 1
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, BoosterMngr::boosters[b].enabled);
+		booster_activate(b);
 
 	//-------------------------------------------
 	// RESET DCC STATUS
@@ -200,6 +218,21 @@ void DccMngr::fini(void)
 #endif
 
 	enable_interrupts();
+
+	for(int b = 0; b < BoosterMngr::nboosters; b++)
+		booster_deactivate(b);
+}
+
+void DccMngr::on(uint8_t b)
+{
+	BoosterMngr::boosters[b].enabled = true;
+	booster_activate(b);
+}
+
+void DccMngr::off(uint8_t b)
+{
+	BoosterMngr::boosters[b].enabled = false;
+	booster_deactivate(b);
 }
 
 uint16_t DccMngr::get_address(uint16_t address, uint8_t addr_type)

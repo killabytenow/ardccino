@@ -28,10 +28,6 @@
 
 void OffMngr::init(void)
 {
-	for(int b = 0; b < BoosterMngr::nboosters; b++) {
-		digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, LOW);
-		digitalWrite(BoosterMngr::boosters[b].dirSignalPin, LOW);
-	  }
 }
 
 void OffMngr::fini(void)
@@ -40,5 +36,23 @@ void OffMngr::fini(void)
 
 void OffMngr::refresh(void)
 {
+}
+
+static void configure_booster(uint8_t b)
+{
+	digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, LOW);
+	digitalWrite(BoosterMngr::boosters[b].dirSignalPin, LOW);
+}
+
+void OffMngr::on(uint8_t b)
+{
+	BoosterMngr::boosters[b].enabled = true;
+	configure_booster(b);
+}
+
+void OffMngr::off(uint8_t b)
+{
+	BoosterMngr::boosters[b].enabled = false;
+	configure_booster(b);
 }
 

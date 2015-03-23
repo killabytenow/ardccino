@@ -417,10 +417,10 @@ int Cli::execute_booster(char **token, char ntokens)
 		CLI_TOKEN_EXPECTED(4);
 		switch(parse_token(token[3], &si)) {
 		case CLI_TOKEN_ON:
-			BoosterMngr::booster(booster)->on();
+			BoosterMngr::current->on(booster);
 			break;
 		case CLI_TOKEN_OFF:
-			BoosterMngr::booster(booster)->off();
+			BoosterMngr::current->off(booster);
 			break;
 		case CLI_TOKEN_INT:
 			if(si < -255 || si > 255)

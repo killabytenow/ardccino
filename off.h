@@ -33,6 +33,9 @@ public:
 	void init(void);
 	void fini(void);
 	void refresh(void);
+
+	void on(uint8_t b);
+	void off(uint8_t b);
 };
 
 #endif

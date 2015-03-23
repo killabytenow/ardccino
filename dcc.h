@@ -112,6 +112,9 @@ public:
 	void fini(void);
 	void refresh(void);
 
+	void on(uint8_t booster);
+	void off(uint8_t booster);
+
 	// low level dcc methods
 	struct dcc_buffer_struct *slot_get(bool service_track, uint16_t address);
 	bool slot_commit(struct dcc_buffer_struct *slot);

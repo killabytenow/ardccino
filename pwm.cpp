@@ -56,28 +56,40 @@ static int get_timer(uint8_t pin)
 	return timer;
 }
 
-static void enable_timer_pin(uint8_t pin)
+static void toggle_timer_pin(uint8_t pin, uint8_t enable)
 {
 	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
+	enable = enable ? 0xff : 0;
+
+#define TOGGLE_TIMER_REG(R,S)	R = ((R) & ~(3 << ((S)*2))) | (enable & (2 << ((S)*2)))
+//#define TOGGLE_TIMER_REG(R,S)	R |= (enable & (2 << ((S)*2))); cli.debug("S = %d, R = %x (%x)", S, R, (enable & (2 << ((S)*2))))
+#define TOGGLE_TIMER_REG_A(R)	TOGGLE_TIMER_REG(R,3)
+#define TOGGLE_TIMER_REG_B(R)	TOGGLE_TIMER_REG(R,2)
+#define TOGGLE_TIMER_REG_C(R)	TOGGLE_TIMER_REG(R,1)
 
 	switch(timer) {
-	case TIMER1A: TCCR1A |= 0b10000000; break; // Clear OC1A on cmp match
-	case TIMER1B: TCCR1A |= 0b00100000; break; // Clear OC1B on cmp match
+	case TIMER1A: TOGGLE_TIMER_REG_A(TCCR1A); break; // OC1A
+	case TIMER1B: TOGGLE_TIMER_REG_B(TCCR1A); break; // OC1B
 #if defined(__AVR_ATmega8__)
-	case TIMER2:  TCCR2  |= 0b10000000; break; // Clear OC2  on cmp match
+	case TIMER2:  TOGGLE_TIMER_REG_A(TCCR2);  break; // OC2
 #endif
-	case TIMER2A: TCCR2A |= 0b10000000; break; // Clear OC2A on cmp match
-	case TIMER2B: TCCR2A |= 0b00100000; break; // Clear OC2B on cmp match
+	case TIMER2A: TOGGLE_TIMER_REG_A(TCCR2A); break; // OC2A
+	case TIMER2B: TOGGLE_TIMER_REG_B(TCCR2A); break; // OC2B
 #if defined (__AVR_ATmega2560__)
-	case TIMER3A: TCCR3A |= 0b10000000; break; // Clear OC3A on cmp match
-	case TIMER3B: TCCR3A |= 0b00100000; break; // Clear OC3B on cmp match
-	case TIMER3C: TCCR3A |= 0b00001000; break; // Clear OC3C on cmp match
+	case TIMER3A: TOGGLE_TIMER_REG_A(TCCR3A); break; // OC3A
+	case TIMER3B: TOGGLE_TIMER_REG_B(TCCR3A); break; // OC3B
+	case TIMER3C: TOGGLE_TIMER_REG_C(TCCR3A); break; // OC3C
 #endif
 	case NOT_ON_TIMER:
-		cli.fatal("enable_timer_pin(): Pin %d cannot be used for PWM output.", pin);
+		cli.fatal("toggle_timer_pin(): Pin %d cannot be used for PWM output.", pin);
 	default:
-		cli.fatal("enable_timer_pin(): Pin %d uses unknown timer (%d)", pin, timer);
+		cli.fatal("toggle_timer_pin(): Pin %d uses unknown timer (%d)", pin, timer);
 	}
+
+#undef TOGGLE_TIMER_REG_A
+#undef TOGGLE_TIMER_REG_B
+#undef TOGGLE_TIMER_REG_C
+#undef TOGGLE_TIMER_REG
 }
 
 static void set_timer_register(uint8_t pin, uint8_t pwm)
@@ -103,6 +115,18 @@ static void set_timer_register(uint8_t pin, uint8_t pwm)
 #endif
 }
 
+static void booster_activate(uint8_t b)
+{
+	toggle_timer_pin(BoosterMngr::boosters[b].pwmSignalPin, 1);
+}
+
+static void booster_deactivate(uint8_t b)
+{
+	toggle_timer_pin(BoosterMngr::boosters[b].pwmSignalPin, 0);
+	digitalWrite(BoosterMngr::boosters[b].dirSignalPin, 0);
+	digitalWrite(BoosterMngr::boosters[b].pwmSignalPin, 0);
+}
+
 void PwmMngr::init(void)
 {
 	uint8_t timers = 0;
@@ -112,11 +136,9 @@ void PwmMngr::init(void)
 	// discover which timers must be configured
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
 		timers |= get_timer(BoosterMngr::boosters[b].pwmSignalPin);
-	cli.debug("  timers %x", timers);
-
-	disable_interrupts();
 
 	// CONFIGURE TIMERS
+	disable_interrupts();
 #ifndef SIMULATOR
 	if(timers & (1 << 1)) {
 		// timer 1
@@ -175,21 +197,15 @@ void PwmMngr::init(void)
 		OCR3A = OCR3B = OCR3C = 0;
 	}
 #endif
-
-	// CONFIGURE OUTPUT PINS FOR DIRECT PWM OUTPUT
-	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		enable_timer_pin(BoosterMngr::boosters[b].pwmSignalPin);
 #endif
+	enable_interrupts();
 
 	//-------------------------------------------
 	// RESET PWM STATUS
-	for(int b = 0; b < BoosterMngr::nboosters; b++)
+	for(int b = 0; b < BoosterMngr::nboosters; b++) {
+		booster_activate(b);
 		BoosterMngr::boosters[b].reset();
-
-	enable_interrupts();
-
-	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		BoosterMngr::boosters[b].on();
+	}
 }
 
 void PwmMngr::fini(void)
@@ -197,11 +213,10 @@ void PwmMngr::fini(void)
 	cli.debug("Disabling PWM");
 
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		BoosterMngr::boosters[b].off();
-
-	disable_interrupts();
+		booster_deactivate(b);
 
 	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
+	disable_interrupts();
 #ifndef SIMULATOR
 	// timer 1
 	TCCR1A = TCCR1A & 0b00001100; TCCR1B = TCCR1B & 0b11100000;
@@ -217,9 +232,21 @@ void PwmMngr::fini(void)
 	OCR3A = OCR3B = OCR3C = 0;
 	TIMSK3 &= 0b11010000;
 #endif
-#endif
-
 	enable_interrupts();
+#endif
+}
+
+void PwmMngr::on(uint8_t b)
+{
+	booster_activate(b);
+	BoosterMngr::boosters[b].enabled = true;
+}
+
+void PwmMngr::off(uint8_t b)
+{
+	BoosterMngr::boosters[b].enabled = false;
+	BoosterMngr::boosters[b].curr_power = 0;
+	booster_deactivate(b);
 }
 
 void PwmMngr::booster_refresh(Booster *b)
@@ -265,7 +292,7 @@ void PwmMngr::booster_refresh(Booster *b)
 	cli.debug("booster#%s power %d accel %d", b->name, b->curr_power, b->curr_accel);
 
 	// UPDATE BOOSTER OUTPUT
-	digitalWrite(b->dirSignalPin, b->curr_power > 0);
+	digitalWrite(b->dirSignalPin, b->enabled && b->curr_power > 0);
 	unsigned char pwmvalue = b->min_power > abs(b->curr_power)
 					? b->min_power
 					: abs(b->curr_power);

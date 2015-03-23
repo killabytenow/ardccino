@@ -39,6 +39,9 @@ public:
 	void fini(void);
 	void refresh(void);
 
+	void on(uint8_t booster);
+	void off(uint8_t booster);
+
 	void accelerate(int b, int v);
 	void speed(int b, int s);
 	void stop(int b);
