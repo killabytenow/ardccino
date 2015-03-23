@@ -318,6 +318,8 @@ sub build_date_h
 my @targets = scalar(@ARGV) ? @ARGV : keys %files;
 
 foreach my $target (@targets) {
+	die "Target '$target' does not exists."
+		if(!exists($files{$target}));
 	printf STDERR "%s: Building '%s' (using '%s')\n",
 			$target,
 			$files{$target}[1],

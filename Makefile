@@ -54,12 +54,20 @@ export MONITOR_BAUDRATE       = 115200
 export EXTRA_CFLAGS=-Wall -Wextra
 export EXTRA_CXXFLAGS=-Wall -Wextra
 
+AUTO_FILES=\
+	auto_banner.h		\
+	auto_banner_wide.h	\
+	auto_build_date.h	\
+	auto_clierrs.h		\
+	auto_clihelp.h		\
+	auto_tokens.h
+
 .PHONY : simulator real clean clean-simulator clean-real depends reset raw_upload show_boards monitor .FORCE
 
-all : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h  clihelp.h auto_build_date.h
+all : $(AUTO_FILES)
 	$(MAKE) -f Real.mk
 
-simulator : auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
+simulator : $(AUTO_FILES)
 	$(MAKE) -f Simulator.mk
 
 auto_tokens.h : tokens.list gen_code.pl
@@ -74,7 +82,7 @@ auto_banner.h : banner.txt gen_code.pl
 auto_banner_wide.h : banner_wide.txt gen_code.pl
 	./gen_code.pl banner_wide
 
-clihelp.h : clihelp.txt gen_code.pl
+auto_clihelp.h : clihelp.txt gen_code.pl
 	./gen_code.pl clihelp
 
 auto_build_date.h : .FORCE
@@ -87,7 +95,7 @@ clean-real :
 	$(MAKE) -f Real.mk clean
 
 clean : clean-simulator clean-real
-	rm -f -- auto_tokens.h auto_clierrs.h auto_banner.h auto_banner_wide.h
+	rm -f -- $(AUTO_FILES)
 
 depends :
 	$(MAKE) -f Simulator.mk depends
