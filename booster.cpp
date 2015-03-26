@@ -81,8 +81,8 @@ void Booster::set_min_power(int p)
 {
 	if(p < 0 || p > 255)
 		cli.fatal(P("Bad min_power (%d)"), p);
-	if(p <= max_power)
-		cli.fatal(P("Proposed min_power (%d) smaller or equal to max_power (%d)"), p, max_power);
+	if(p >= max_power)
+		cli.fatal(P("Proposed min_power (%d) greater or equal to max_power (%d)"), p, max_power);
 	min_power = p;
 }
 
