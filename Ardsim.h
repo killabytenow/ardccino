@@ -60,10 +60,12 @@ typedef uint16_t           word;
 #define fontbyte(x) cfont.font[x]  
 
 #define pinMode(x, y)
-#define digitalWrite(x, y)
+#define digitalWrite(x, y)	{ if(0) { (void)(x); (void)(y); } }
 #define delay(x)		usleep((x) * 1000)
 #define PROGMEM
 
 #define UNUSED(x)		{ if(0) { (void)(x); } } 
+#define LOW			0
+#define HIGH			-1
 
 #endif
