@@ -120,6 +120,7 @@ public:
 	// dcc methods
 	uint16_t get_address(uint16_t address, uint8_t addr_type);
 	bool set_speed(bool service_track, uint16_t address, uint16_t speed);
+	bool set_light(bool service_track, uint16_t address, bool on);
 };
 
 #endif

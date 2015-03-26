@@ -342,6 +342,21 @@ bool DccMngr::set_speed(bool service_track, uint16_t address, uint16_t speed)
 	return slot_commit(slot);
 }
 
+bool DccMngr::set_light(bool service_track, uint16_t address, bool on)
+{
+	struct dcc_buffer_struct *slot;
+	byte *msg;
+
+	if(!(slot = slot_get(service_track, address)))
+		return false;
+	msg = slot->msg + slot->len;
+
+	msg[0] = on ? 0b10010000 : 0b10000000;
+	slot->len++;
+
+	return slot_commit(slot);
+}
+
 void DccMngr::refresh(void)
 {
 #if 0
