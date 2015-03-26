@@ -39,11 +39,16 @@ export ARDUINO_DIR            = /usr/share/arduino/
 export ARDMK_DIR              = $(ARDUINO_DIR)
 export AVR_TOOLS_DIR          = /usr
 export TARGET                 = Ardccino
-export ARDUINO_LIBS           = UTFT
+#export ARDUINO_LIBS           = UTFT
 export BOARD_TAG              = mega2560
+#export BOARD_TAG              = uno
 #export MCU                    = atmega328p
 #export F_CPU                  = 16000000
-export ARDUINO_PORT           = /dev/$(shell dmesg |grep 'FTDI USB Serial Device converter now attached to' | sed 's/^.*attached to //' | tail -n1)
+export ARDUINO_PORT           = /dev/$(shell \
+					dmesg \
+					| grep 'FTDI USB Serial Device converter now attached to\|: USB ACM device' \
+					| sed 's/^.* \(tty[^:]*\).*$$/\1/' \
+					| tail -n1)
 export AVRDUDE_ARD_BAUDRATE   = 115200
 #export AVRDUDE_ARD_PROGRAMMER = arduino
 export AVRDUDE_ARD_PROGRAMMER = wiring
