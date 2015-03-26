@@ -29,6 +29,7 @@
 
 static int get_timer(uint8_t pin)
 {
+#ifndef SIMULATOR
 	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
 
 	switch(timer) {
@@ -54,10 +55,14 @@ static int get_timer(uint8_t pin)
 		cli.fatal(P("get_timer(): Pin %d uses unknown timer (%d)"), pin, timer);
 	}
 	return timer;
+#else
+	return 1 << (pin % 2);
+#endif
 }
 
 static void toggle_timer_pin(uint8_t pin, uint8_t enable)
 {
+#ifndef SIMULATOR
 	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
 	enable = enable ? 0xff : 0;
 
@@ -89,10 +94,14 @@ static void toggle_timer_pin(uint8_t pin, uint8_t enable)
 #undef TOGGLE_TIMER_REG_B
 #undef TOGGLE_TIMER_REG_C
 #undef TOGGLE_TIMER_REG
+#else
+	enable = pin = enable; // shit! I hate warnings!
+#endif
 }
 
 static void set_timer_register(uint8_t pin, uint8_t pwm)
 {
+#ifndef SIMULATOR
 	uint8_t timer = pgm_read_byte_near(digital_pin_to_timer_PGM + pin);
 
 #ifndef SIMULATOR
@@ -112,6 +121,9 @@ static void set_timer_register(uint8_t pin, uint8_t pwm)
 	default: cli.fatal(P("Cannot write PWM output to pin %d"), pin);
 	}
 #endif
+#else
+	pwm = pin = pwm; // shit! I hate warnings!
+#endif
 }
 
 static void booster_activate(uint8_t b)
@@ -129,8 +141,6 @@ static void booster_deactivate(uint8_t b)
 void PwmMngr::init(void)
 {
 	uint8_t timers = 0;
-
-	cli.debug(P("Initializing PWM."));
 
 	// discover which timers must be configured
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
@@ -209,8 +219,6 @@ void PwmMngr::init(void)
 
 void PwmMngr::fini(void)
 {
-	cli.debug(P("Disabling PWM"));
-
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
 		booster_deactivate(b);
 
@@ -288,7 +296,7 @@ void PwmMngr::booster_refresh(Booster *b)
 		b->curr_power = b->trgt_power;
 		b->curr_accel = 0;
 	}
-	cli.debug(P("booster#%s power %d accel %d"), b->name, b->curr_power, b->curr_accel);
+	//cli.debug(P("booster#%s power %d accel %d"), b->name, b->curr_power, b->curr_accel);
 
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->enabled && b->curr_power > 0);
