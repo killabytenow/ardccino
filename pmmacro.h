@@ -26,11 +26,18 @@
 #ifndef __PMMACRO_H__
 #define __PMMACRO_H__
 
+#ifndef SIMULATOR
 #define P(str)	({						\
-			strncpy_P(__p_buffer, PSTR(str), sizeof(__p_buffer) - 1);	\
-			__p_buffer[sizeof(__p_buffer) - 1] = '\0';			\
+			strncpy_P(				\
+				__p_buffer,			\
+				PSTR(str),			\
+				__P_BUFFER_SIZE - 1);		\
+			__p_buffer[__P_BUFFER_SIZE - 1] = '\0';	\
 			__p_buffer;				\
 		})
+#else
+#define	P(x)	x
+#endif
 
 #define __P_BUFFER_SIZE	128
 
