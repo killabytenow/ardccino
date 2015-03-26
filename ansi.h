@@ -26,8 +26,10 @@
 #ifndef __ANSI_H__
 #define __ANSI_H__
 
-#define ANSI_ESC "\x1B"
-#define ANSI_CSI "\x1B["
+#define ANSI_ESC	"\x1B"
+#define ANSI_CSI	"\x1B["
+#define ANSI_DCS	"\x1BP"
+#define ANSI_ST		"\x1B\\"
 
 // ED – Erase Display (cursor does not move)
 //   Clears part of the screen. If n is zero (or missing), clear from cursor to
