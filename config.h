@@ -49,7 +49,6 @@
 #  include <stdlib.h>
 #  define SIM_DBG(frm, ...) g_print(__FILE__ ":%s:" frm "\n", __func__, __VA_ARGS__)
 #endif
-//#include <UTFT.h>
 
 #include "ansi.h"
 
@@ -75,9 +74,9 @@
 Booster boosters[] = {
 //	        name         pwm  dir  tmp  ocp  rst
 //	        ------------ ---  ---  ---  ---  --- 
-	Booster("booster#1",   3,   2,   4,   5,  14),
-	Booster("booster#2",   9,   6,   7,   8,  14),
-	Booster("booster#3",  10,  11,  12,  13,  14),
+	Booster("booster#0",   3,   2,   4,   5,  14),
+	Booster("booster#1",   9,   6,   7,   8,  14),
+	Booster("booster#2",  10,  11,  12,  13,  14),
 };
 #  define BOOSTERS_N (sizeof(boosters) / sizeof(Booster))
 #endif
@@ -144,6 +143,7 @@ Cli cli = Cli();
 #  undef ENABLE_SCREEN
 #endif
 #ifdef ENABLE_SCREEN
+#  include <UTFT.h>
 #  ifdef __DECLARE_GLOBALS__
 
 // Elecfreaks TFT01-2.2SP 2.2 SPI 240 x 320 TFT LCD Module
