@@ -49,7 +49,7 @@
 #  include <stdlib.h>
 #  define SIM_DBG(frm, ...) g_print(__FILE__ ":%s:" frm "\n", __func__, __VA_ARGS__)
 #endif
-#include <UTFT.h>
+//#include <UTFT.h>
 
 #include "ansi.h"
 
@@ -57,6 +57,8 @@
 #include "off.h"
 #include "pwm.h"
 #include "dcc.h"
+
+#include "pmmacro.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // CONFIGURE BOOSTERS
@@ -93,7 +95,7 @@ Booster boosters[] = {
 // define or set it to -1.
 ///////////////////////////////////////////////////////////////////////////////
 
-#define SERVICE_TRACK 2
+#define SERVICE_TRACK -1
 
 ///////////////////////////////////////////////////////////////////////////////
 // SERIAL CLI INTERFACE
@@ -219,6 +221,20 @@ extern PwmMngr pwm;
 extern DccMngr dcc;
 #ifdef CLI_ENABLED
 extern Cli cli;
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+// EMIT ERRORS
+///////////////////////////////////////////////////////////////////////////////
+
+#if (!defined(HWGUI_ENABLED) && !defined(CLI_ENABLED))
+#error "Is stupid to build a controller without control input methods - enable serial CLI at least"
+#endif
+
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega8__)
+#  if SERVICE_TRACK != -1
+#    error "Arduino Uno does not support more than one dcc output."
+#  endif
 #endif
 
 #endif

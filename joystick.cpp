@@ -67,14 +67,5 @@ bool Joystick::pressed(uint8_t flag)
 	return (~old & Joystick::now & flag) == flag;
 }
 
-void Joystick::print()
-{
-	if(move(JOY_UP))     Serial.print(" UP");
-	if(move(JOY_DOWN))   Serial.print(" DOWN");
-	if(move(JOY_LEFT))   Serial.print(" LEFT");
-	if(move(JOY_RIGHT))  Serial.print(" RIGHT");
-	if(move(JOY_BUTTON)) Serial.println(" [XX]"); else Serial.println(" [  ]");
-}
-
 #endif
 

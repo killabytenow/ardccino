@@ -95,7 +95,6 @@ static inline uint16_t DCC_DECO_SPEED_GET4(int16_t s, bool l)
 
 class DccMngr : public BoosterMngr {
 public:
-	int8_t   service_booster;
 	struct   dcc_state operations;
 	struct   dcc_state service;
 	int8_t   default_addr_type;
@@ -107,7 +106,6 @@ public:
 	void isr(struct dcc_state *ds, volatile uint16_t *OCR1x);
 
 	DccMngr();
-	DccMngr(int8_t service);
 	void init(void);
 	void fini(void);
 	void refresh(void);

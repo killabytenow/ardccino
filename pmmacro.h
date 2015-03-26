@@ -1,7 +1,7 @@
 /*****************************************************************************
- * booster_mngr.cpp
+ * pmmacro.h
  *
- * Generic booster manager.
+ * Kick strings to the PROGMEM, but offer a quick&easy way to restore them.
  *
  * ---------------------------------------------------------------------------
  * ardccino - Arduino dual PWM/DCC controller
@@ -23,56 +23,17 @@
  *
  *****************************************************************************/
 
-#include "config.h"
-#include "booster_mngr.h"
+#ifndef __PMMACRO_H__
+#define __PMMACRO_H__
 
-BoosterMngr *BoosterMngr::current = NULL;
-Booster     *BoosterMngr::boosters = NULL;
-int          BoosterMngr::nboosters = 0;
+#define P(str)	({						\
+			strncpy_P(__p_buffer, PSTR(str), sizeof(__p_buffer) - 1);	\
+			__p_buffer[sizeof(__p_buffer) - 1] = '\0';			\
+			__p_buffer;				\
+		})
 
-BoosterMngr *BoosterMngr::enable(void)
-{
-	if(BoosterMngr::current == this)
-		return this;
-	if(BoosterMngr::current)
-		BoosterMngr::current->fini();
-	BoosterMngr::current = this;
-	init();
-	return this;
-}
+#define __P_BUFFER_SIZE	128
 
-int BoosterMngr::enabled(void)
-{
-	return this == BoosterMngr::current;
-}
+extern char __p_buffer[__P_BUFFER_SIZE];
 
-void BoosterMngr::refresh_current(void)
-{
-	BoosterMngr::current->refresh();
-}
-
-Booster *BoosterMngr::booster(uint8_t booster)
-{
-	if(booster > BoosterMngr::nboosters)
-		cli.fatal(P("Booster #%d out of bounds"), booster);
-	return BoosterMngr::boosters + booster;
-}
-
-void BoosterMngr::set_boosters(Booster *ba, int n)
-{
-	BoosterMngr::boosters = ba;
-	BoosterMngr::nboosters = n;
-}
-
-void BoosterMngr::on_all(void)
-{
-	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		this->on(b);
-}
-
-void BoosterMngr::off_all(void)
-{
-	for(int b = 0; b < BoosterMngr::nboosters; b++)
-		this->off(b);
-}
-
+#endif

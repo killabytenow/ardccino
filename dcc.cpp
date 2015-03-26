@@ -41,7 +41,9 @@ static byte dcc_msg_idle[3] = { 0xff, 0x00, 0xff };
 ISR(TIMER1_COMPA_vect)
 {
 	for(int i = 0; i < BoosterMngr::nboosters; i++)
-		if(i != dcc.service_booster)
+#if SERVICE_TRACK >= 0
+		if(i != SERVICE_TRACK)
+#endif
 			digitalWrite(
 				BoosterMngr::boosters[i].dirSignalPin,
 				dcc.operations.dccZero && BoosterMngr::boosters[i].enabled);
@@ -55,13 +57,12 @@ ISR(TIMER1_COMPA_vect)
 		dcc.operations.dcc_excesive_lat = lat;
 }
 
+#if SERVICE_TRACK >= 0
 ISR(TIMER3_COMPA_vect)
 {
-	if(dcc.service_booster < 0)
-		return;
 	digitalWrite(
-		BoosterMngr::boosters[dcc.service_booster].dirSignalPin,
-		dcc.service.dccZero && BoosterMngr::boosters[dcc.service_booster].enabled);
+		BoosterMngr::boosters[SERVICE_TRACK].dirSignalPin,
+		dcc.service.dccZero && BoosterMngr::boosters[SERVICE_TRACK].enabled);
 	dcc.isr(&dcc.service, &OCR3A);
 
 	// Capture the current timer value (TCTNx) for debugging purposes. It
@@ -71,10 +72,9 @@ ISR(TIMER3_COMPA_vect)
 	if(lat >= DCC_CTC_ONE)
 		dcc.service.dcc_excesive_lat = lat;
 }
+#endif
 
-#define OCRXX *OCR1x
-//#define OCRXX OCR1A
-void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
+void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCRnx)
 {
 	struct dcc_buffer_struct *cmsg;
 
@@ -84,7 +84,7 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 
 	if(!ds->msg) {
 		// we are still in preamble
-		OCRXX = DCC_CTC_ONE;
+		*OCRnx = DCC_CTC_ONE;
 		if(--ds->dccCurrentBit > 0)
 			return;
 
@@ -105,7 +105,7 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 	} else {
 		if(ds->dccCurrentBit) {
 			// send data bit
-			OCRXX = (*ds->msg & ds->dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
+			*OCRnx = (*ds->msg & ds->dccCurrentBit) ? DCC_CTC_ONE : DCC_CTC_ZERO;
 			ds->dccCurrentBit >>= 1;
 			if(!ds->dccCurrentBit) {
 				ds->msg++;
@@ -117,9 +117,9 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 			if(ds->msg_pending <= 0) {
 				ds->msg = NULL;
 				ds->dccCurrentBit = 16;
-				OCRXX = DCC_CTC_ONE; // last bit
+				*OCRnx = DCC_CTC_ONE; // last bit
 			} else {
-				OCRXX = DCC_CTC_ZERO; // more data will come
+				*OCRnx = DCC_CTC_ZERO; // more data will come
 			}
 		}
 	}
@@ -127,12 +127,6 @@ void DccMngr::isr(struct dcc_state *ds, volatile uint16_t *OCR1x)
 #endif
 
 DccMngr::DccMngr() : BoosterMngr()
-{
-	service_booster = -1;
-}
-
-DccMngr::DccMngr(int8_t service_booster)
-	: BoosterMngr(), service_booster(service_booster)
 {
 }
 
@@ -151,13 +145,13 @@ static void booster_deactivate(uint8_t b)
 
 void DccMngr::init(void)
 {
-	if(service_booster >= BoosterMngr::nboosters)
-		cli.fatal("service_booster id is above nboosters.");
+	if(SERVICE_TRACK >= BoosterMngr::nboosters)
+		cli.fatal(P("SERVICE_TRACK id is above nboosters."));
 
 	disable_interrupts();
 
 #ifndef SIMULATOR
-	// CONFIGURE TIMER 1
+	// CONFIGURE TIMER 1/A
 	TCCR1A = (TCCR1A & 0b00001100)
 	       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
 	       | 0b00000000     // OC1A disconnected
@@ -165,31 +159,24 @@ void DccMngr::init(void)
 	TCCR1B = (TCCR1B & 0b11100000)
 	       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
 	       | 0b00001000;    // Normal mode (!WGM13, WGM12)
-	OCR1B = 0;         // set compare registers
 	OCR1A = DCC_CTC_ONE;
 	TIMSK1 = (TIMSK1 & 0b11011000)
 	       | (1 << OCIE1A); // output cmp A match interrupt enable
 		 
-	// DISABLE TIMER 2
-	TCCR2A = TCCR2A & 0b00001100;
-	TCCR2B = TCCR2B & 0b11110000;
-	OCR2A = OCR2B = 0;
-	TIMSK2 &= 0b11111000;
-
-	if(service_booster >= 0) {
-		// CONFIGURE TIMER 3
-		TCCR3A = (TCCR3A & 0b00001100)
-		       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
-		       | 0b00000000     // OC3A disconnected
-		       | 0b00000000;    // OC3B disconnected
-		TCCR3B = (TCCR3B & 0b11100000)
-		       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
-		       | 0b00001000;    // Normal mode (!WGM13, WGM12)
-		OCR3B = 0xffff;         // set compare registers
-		OCR3A = DCC_CTC_ONE;
-		TIMSK3 = (TIMSK3 & 0b11011000)
-		       | (1 << OCIE3A); // output cmp A match interrupt enable
-	}
+#if SERVICE_TRACK >= 0
+	// CONFIGURE TIMER 3
+	TCCR3A = (TCCR3A & 0b00001100)
+	       | 0b00000000     // CTC  mode (!WGM11, !WGM10)
+	       | 0b00000000     // OC3A disconnected
+	       | 0b00000000;    // OC3B disconnected
+	TCCR3B = (TCCR3B & 0b11100000)
+	       | 0x2            // clock prescaler 0x02 (16e6/8 = 2 Mhz)
+	       | 0b00001000;    // Normal mode (!WGM13, WGM12)
+	OCR3B = 0xffff;         // set compare registers
+	OCR3A = DCC_CTC_ONE;
+	TIMSK3 = (TIMSK3 & 0b11011000)
+	       | (1 << OCIE3A); // output cmp A match interrupt enable
+#endif
 #endif
 
 	// SET PWM OUTPUTS TO 1
@@ -207,16 +194,23 @@ void DccMngr::init(void)
 
 void DccMngr::fini(void)
 {
+	// disconnect all timers
 	disable_interrupts();
-
-	// disconnect all OC1A:B/OC2A:B pins and go to normal operations mode
 #ifndef SIMULATOR
-	TCCR1A = TCCR1A & 0b00001100;    TCCR2A = TCCR2A & 0b00001100;
-	TCCR1B = TCCR1B & 0b11100000;    TCCR2B = TCCR2B & 0b11110000;
-	OCR1A = OCR1B = 0;               OCR2A = OCR2B = 0;
-	TIMSK1 &= 0b11011000;            TIMSK2 &= 0b11111000;
-#endif
+	// timer 1
+	TCCR1A = TCCR1A & 0b00001100;
+	TCCR1B = TCCR1B & 0b11100000;
+	OCR1A = OCR1B = 0;
+	TIMSK1 &= 0b11011000;
 
+#if SERVICE_TRACK >= 0
+	// timer 3
+	TCCR3A = TCCR3A & 0b00001100;
+	TCCR3B = TCCR3B & 0b11100000;
+	OCR3A = OCR3B = 0;           
+	TIMSK3 &= 0b11011000;        
+#endif
+#endif
 	enable_interrupts();
 
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
@@ -245,7 +239,7 @@ again:
 	default:
 	case DCC_ADDR_TYPE_7BIT:
 		if(address > 0x7f || !address) {
-			cli.error("Invalid 7bit address (%d).", address);
+			cli.error(P("Invalid 7bit address (%d)."), address);
 			return DCC_DECO_ADDR_BAD;
 		}
 		address |= DCC_DECO_ADDR_7BIT;
@@ -253,7 +247,7 @@ again:
 
 	case DCC_ADDR_TYPE_14BIT:
 		if(address > 0x27ff) {
-			cli.error("Invalid 14-bit address (%d)", address);
+			cli.error(P("Invalid 14-bit address (%d)"), address);
 			return DCC_DECO_ADDR_BAD;
 		}
 		address |= DCC_DECO_ADDR_14BIT;
@@ -288,7 +282,7 @@ struct dcc_buffer_struct *DccMngr::slot_get(bool service_track, uint16_t address
 		if(slot->reps < 0)
 			break;
 	if(i >= DCC_BUFFER_POOL_SIZE) {
-		cli.error("No free slots.");
+		cli.error(P("No free slots."));
 		return NULL;
 	}
 
@@ -310,7 +304,7 @@ bool DccMngr::slot_commit(struct dcc_buffer_struct *slot)
 	byte chksum, *msg;
 
 	if(slot->len < 2 || slot->len >= DCC_MSG_MAX) {
-		cli.error("Bad message size");
+		cli.error(P("Bad message size"));
 		return false;
 	}
 
@@ -355,13 +349,13 @@ void DccMngr::refresh(void)
 	if(lolol++ >= 30) {
 		lolol = 0;
 
-		cli.debug("DCC msg=%p msg_pending=%d currbit=%d l_id=%d",
+		cli.debug(P("DCC msg=%p msg_pending=%d currbit=%d l_id=%d"),
 				operations.msg,
 				operations.msg_pending,
 				operations.dccCurrentBit,
 				operations.dcc_last_msg_id);
 		for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
-			cli.debug("  pool[%d] = %x %d %d",
+			cli.debug(P("  pool[%d] = %x %d %d"),
 					i,
 					operations.pool[i].address,
 					operations.pool[i].len,
@@ -372,18 +366,18 @@ void DccMngr::refresh(void)
 		static int dir = 20;
 		dir = 0 - dir;
 		if(!set_speed(false, DCC_DECO_ADDR_GET7(3), DCC_DECO_SPEED_GET5(5)))
-			cli.debug("cannot send speed");
+			cli.debug(P("cannot send speed"));
 #endif
 	}
 #endif
 
 	// warn about excesive latencies
 	if(operations.dcc_excesive_lat) {
-		cli.error("operations.dcc_excesive_lat = %d", operations.dcc_excesive_lat);
+		cli.error(P("operations.dcc_excesive_lat = %d"), operations.dcc_excesive_lat);
 		operations.dcc_excesive_lat = 0;
 	}
 	if(service.dcc_excesive_lat) {
-		cli.error("service.dcc_excesive_lat = %d", service.dcc_excesive_lat);
+		cli.error(P("service.dcc_excesive_lat = %d"), service.dcc_excesive_lat);
 		service.dcc_excesive_lat = 0;
 	}
 }

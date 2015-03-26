@@ -219,13 +219,13 @@ void Cli::help(void)
 void Cli::booster_list(void)
 {
 	Booster *b;
-	info("#"
+	info(P("#"
 		ANSI_SGR_BOLD "id" ANSI_SGR_BOLD_OFF "\t"
 		ANSI_SGR_BOLD "enabled" ANSI_SGR_BOLD_OFF "\t"
-		ANSI_SGR_BOLD "name" ANSI_SGR_BOLD_OFF);
+		ANSI_SGR_BOLD "name" ANSI_SGR_BOLD_OFF));
 	for(int bi = 0; bi < BoosterMngr::nboosters; bi++) {
 		b = BoosterMngr::booster(bi);
-		info("%d\t%s\t%s",
+		info(P("%d\t%s\t%s"),
 			bi,
 			b->enabled ? "yes" : "no",
 			b->name);
@@ -234,22 +234,22 @@ void Cli::booster_list(void)
 
 void Cli::booster_status(Booster *b)
 {
-	info("Booster [%s] is %s", b->name, b->enabled ? "ON" : "OFF");
-	info("hw-config:");
-	info("  pwmSignalPin: %d", b->pwmSignalPin);
-	info("  dirSignalPin: %d", b->dirSignalPin);
-	info("  tmpAlarmPin:  %d", b->tmpAlarmPin);
-	info("  ocpAlarmPin:  %d", b->ocpAlarmPin);
-	info("  rstSignalPin: %d", b->rstSignalPin);
-	info("analog-control:");
-	info("  trgt_power: %d", b->trgt_power);
-	info("  curr_power: %d", b->curr_power);
-	info("  curr_accel: %d", b->curr_accel);
-	info("  inc_accel:  %d", b->inc_accel);
-	info("  max_accel:  %d", b->max_accel);
-	info("  min_power:  %d", b->min_power);
-	info("  max_power:  %d", b->max_power);
-	info("  mode:       %s", b->inertial ? "inertial" : "direct");
+	info(P("Booster [%s] is %s"), b->name, b->enabled ? "ON" : "OFF");
+	info(P("hw-config:"));
+	info(P("  pwmSignalPin: %d"), b->pwmSignalPin);
+	info(P("  dirSignalPin: %d"), b->dirSignalPin);
+	info(P("  tmpAlarmPin:  %d"), b->tmpAlarmPin);
+	info(P("  ocpAlarmPin:  %d"), b->ocpAlarmPin);
+	info(P("  rstSignalPin: %d"), b->rstSignalPin);
+	info(P("analog-control:"));
+	info(P("  trgt_power: %d"), b->trgt_power);
+	info(P("  curr_power: %d"), b->curr_power);
+	info(P("  curr_accel: %d"), b->curr_accel);
+	info(P("  inc_accel:  %d"), b->inc_accel);
+	info(P("  max_accel:  %d"), b->max_accel);
+	info(P("  min_power:  %d"), b->min_power);
+	info(P("  max_power:  %d"), b->max_power);
+	info(P("  mode:       %s"), b->inertial ? "inertial" : "direct");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -320,7 +320,7 @@ bool Cli::parse_unsigned(char *token, uint16_t *v)
 			return false;
 		break;
 	default:
-		fatal("unknown number type");
+		fatal(P("unknown number type"));
 	}
 
 	if(v) *v = n;
@@ -521,7 +521,7 @@ int Cli::execute_dcc_cmd_speed(char **token, char ntokens, bool service_track, u
 		break;
 
 	case CLI_TOKEN_LIGHT:
-		cli.info("'light' parameter forces deprecated 4bit speed mode.");
+		cli.info(P("'light' parameter forces deprecated 4bit speed mode."));
 		st = CLI_TOKEN_4BIT;
 		ntokens--; token++;
 		goto light;
@@ -661,15 +661,15 @@ int Cli::execute_dcc(char **token, char ntokens)
 			return CLI_ERR_TOO_MANY_PARAMS;
 		switch(parse_token(token[1])) {
 		case CLI_TOKEN_ADVANCED:
-			cli.info("Using 4-digit (14bit) addresses by default.");
+			cli.info(P("Using 4-digit (14bit) addresses by default."));
 			dcc.default_addr_type = DCC_ADDR_TYPE_14BIT;
 			break;
 		case CLI_TOKEN_NORMAL:
-			cli.info("Using 2-digit (7bit) addresses by default.");
+			cli.info(P("Using 2-digit (7bit) addresses by default."));
 			dcc.default_addr_type = DCC_ADDR_TYPE_7BIT;
 			break;
 		case CLI_TOKEN_AUTO:
-			cli.info("Using auto-detect address algorithm.");
+			cli.info(P("Using auto-detect address algorithm."));
 			dcc.default_addr_type = DCC_ADDR_TYPE_AUTO;
 			break;
 		default:
@@ -764,9 +764,9 @@ void Cli::parse(char *buffer)
 	// print error/ok string
 	strcpy_P(err, (char *) pgm_read_ptr(&(cli_errs[r])));
 	if(!r)
-		info("%s", err);
+		info(P("%s"), err);
 	else
-		error("%s", err);
+		error(P("%s"), err);
 }
 
 void Cli::input_read(void)
@@ -820,7 +820,7 @@ ojete:
 			&& !(c >= '0' && c <= '9')
 			&& c != ' ' && c != '-' && c != '+'
 			&& c != '?' && c != '@')
-				SIM_DBG("puta=%d (%c)", c, c);
+				SIM_DBG(P("puta=%d (%c)"), c, c);
 #endif
 			input_add(c);
 		}

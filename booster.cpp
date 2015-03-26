@@ -73,32 +73,32 @@ void Booster::reset(void)
 void Booster::set_inc_accel(int a)
 {
 	if(a <= 0 || a > 64)
-		cli.fatal("Bad acceleration increment (%d)", a);
+		cli.fatal(P("Bad acceleration increment (%d)"), a);
 	inc_accel = a;
 }
 
 void Booster::set_min_power(int p)
 {
 	if(p < 0 || p > 255)
-		cli.fatal("Bad min_power (%d)", p);
+		cli.fatal(P("Bad min_power (%d)"), p);
 	if(p <= max_power)
-		cli.fatal("Proposed min_power (%d) smaller or equal to max_power (%d)", p, max_power);
+		cli.fatal(P("Proposed min_power (%d) smaller or equal to max_power (%d)"), p, max_power);
 	min_power = p;
 }
 
 void Booster::set_max_power(int p)
 {
 	if(p < 0 || p > 255)
-		cli.fatal("Bad max_power (%d)", p);
+		cli.fatal(P("Bad max_power (%d)"), p);
 	if(p <= min_power)
-		cli.fatal("Proposed max_power (%d) smaller or equal to min_power (%d)", p, max_power);
+		cli.fatal(P("Proposed max_power (%d) smaller or equal to min_power (%d)"), p, max_power);
 	max_power = p;
 }
 
 void Booster::set_max_accel(int a)
 {
 	if(a < 0 || a > 255)
-		cli.fatal("Bad max_accel (%d)", a);
+		cli.fatal(P("Bad max_accel (%d)"), a);
 	max_accel = a;
 }
 

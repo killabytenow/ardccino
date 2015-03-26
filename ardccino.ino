@@ -23,8 +23,6 @@
  *
  *****************************************************************************/
 
-#include <memorysaver.h>
-
 #define __DECLARE_GLOBALS__ 1
 #include "config.h"
 #include "hwgui.h"
@@ -41,7 +39,7 @@ void setup(void)
 	// enable interfaces
 #ifdef CLI_ENABLED
 	cli.init();
-	cli.info("ardccino v1.0 ready");
+	cli.info(P("ardccino v1.0 ready"));
 	{
 		char buffer[100];
 		strcpy_P(buffer, (char *) build_date);

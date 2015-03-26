@@ -103,7 +103,7 @@ void UIHello::draw(void)
 {
 	char buffer[100];
 
-	cli.debug("drawing hello");
+	cli.debug(P("drawing hello"));
 
 	tft.fillScr(VGA_BLUE);
 	tft.setFont(SmallFont);
@@ -193,7 +193,7 @@ UIScreen *UIGlobalConfig::do_joystick_event(void)
 		case 1: pwm.enable(); return &ui_pwm;
 		case 2: dcc.enable(); break;
 		default:
-			cli.fatal("Unknown option.");
+			cli.fatal(P("Unknown option."));
 		}
 	}
 	draw();
@@ -212,7 +212,7 @@ void UIPWM::draw(void)
 	refresh = 0;
 	if(!focus) {
 		tft.fillScr(VGA_NAVY);
-		Serial.print("PWM POWER\r\n=========\r\n\r\n");
+		//Serial.print("PWM POWER\r\n=========\r\n\r\n");
 	}
 	//ansi_goto(1, 4);
 

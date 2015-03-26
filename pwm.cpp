@@ -49,9 +49,9 @@ static int get_timer(uint8_t pin)
 		break;
 #endif
 	case NOT_ON_TIMER:
-		cli.fatal("get_timer(): Pin %d cannot be used for PWM output.", pin);
+		cli.fatal(P("get_timer(): Pin %d cannot be used for PWM output."), pin);
 	default:
-		cli.fatal("get_timer(): Pin %d uses unknown timer (%d)", pin, timer);
+		cli.fatal(P("get_timer(): Pin %d uses unknown timer (%d)"), pin, timer);
 	}
 	return timer;
 }
@@ -62,7 +62,6 @@ static void toggle_timer_pin(uint8_t pin, uint8_t enable)
 	enable = enable ? 0xff : 0;
 
 #define TOGGLE_TIMER_REG(R,S)	R = ((R) & ~(3 << ((S)*2))) | (enable & (2 << ((S)*2)))
-//#define TOGGLE_TIMER_REG(R,S)	R |= (enable & (2 << ((S)*2))); cli.debug("S = %d, R = %x (%x)", S, R, (enable & (2 << ((S)*2))))
 #define TOGGLE_TIMER_REG_A(R)	TOGGLE_TIMER_REG(R,3)
 #define TOGGLE_TIMER_REG_B(R)	TOGGLE_TIMER_REG(R,2)
 #define TOGGLE_TIMER_REG_C(R)	TOGGLE_TIMER_REG(R,1)
@@ -81,9 +80,9 @@ static void toggle_timer_pin(uint8_t pin, uint8_t enable)
 	case TIMER3C: TOGGLE_TIMER_REG_C(TCCR3A); break; // OC3C
 #endif
 	case NOT_ON_TIMER:
-		cli.fatal("toggle_timer_pin(): Pin %d cannot be used for PWM output.", pin);
+		cli.fatal(P("toggle_timer_pin(): Pin %d cannot be used for PWM output."), pin);
 	default:
-		cli.fatal("toggle_timer_pin(): Pin %d uses unknown timer (%d)", pin, timer);
+		cli.fatal(P("toggle_timer_pin(): Pin %d uses unknown timer (%d)"), pin, timer);
 	}
 
 #undef TOGGLE_TIMER_REG_A
@@ -110,7 +109,7 @@ static void set_timer_register(uint8_t pin, uint8_t pwm)
 	case TIMER3B: OCR3B = pwm; break;
 	case TIMER3C: OCR3C = pwm; break;
 #endif
-	default: cli.fatal("Cannot write PWM output to pin %d", pin);
+	default: cli.fatal(P("Cannot write PWM output to pin %d"), pin);
 	}
 #endif
 }
@@ -131,7 +130,7 @@ void PwmMngr::init(void)
 {
 	uint8_t timers = 0;
 
-	cli.debug("Initializing PWM.");
+	cli.debug(P("Initializing PWM."));
 
 	// discover which timers must be configured
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
@@ -210,7 +209,7 @@ void PwmMngr::init(void)
 
 void PwmMngr::fini(void)
 {
-	cli.debug("Disabling PWM");
+	cli.debug(P("Disabling PWM"));
 
 	for(int b = 0; b < BoosterMngr::nboosters; b++)
 		booster_deactivate(b);
@@ -289,7 +288,7 @@ void PwmMngr::booster_refresh(Booster *b)
 		b->curr_power = b->trgt_power;
 		b->curr_accel = 0;
 	}
-	cli.debug("booster#%s power %d accel %d", b->name, b->curr_power, b->curr_accel);
+	cli.debug(P("booster#%s power %d accel %d"), b->name, b->curr_power, b->curr_accel);
 
 	// UPDATE BOOSTER OUTPUT
 	digitalWrite(b->dirSignalPin, b->enabled && b->curr_power > 0);
@@ -319,7 +318,7 @@ void PwmMngr::accelerate(Booster *b, int v)
 void PwmMngr::accelerate(int b, int v)
 {
 	if(b < 0 || b > BoosterMngr::nboosters)
-		cli.fatal("pwmAccelerate: booster out of bounds.");
+		cli.fatal(P("pwmAccelerate: booster out of bounds."));
 
 	accelerate(BoosterMngr::boosters + b, v);
 }
@@ -327,9 +326,9 @@ void PwmMngr::accelerate(int b, int v)
 void PwmMngr::speed(int b, int s)
 {
 	if(b < 0 || b > BoosterMngr::nboosters)
-		cli.fatal("pwmSpeed: pwm booster out of bounds.");
+		cli.fatal(P("pwmSpeed: pwm booster out of bounds."));
 	if(s < -255 || s > 255)
-		cli.fatal("pwmSpeed: speed out of bounds.");
+		cli.fatal(P("pwmSpeed: speed out of bounds."));
 	BoosterMngr::boosters[b].trgt_power = s;
 }
 
@@ -341,7 +340,7 @@ void PwmMngr::stop(int b)
 void PwmMngr::switch_dir(int b)
 {
 	if(b < 0 || b > BoosterMngr::nboosters)
-		cli.fatal("switch_dir: pwm out of bounds.");
+		cli.fatal(P("switch_dir: pwm out of bounds."));
     
 	BoosterMngr::boosters[b].trgt_power = 0 - BoosterMngr::boosters[b].trgt_power;
 }
