@@ -48,6 +48,7 @@ Cli::Cli(void)
 {
 	input_reset();
 	input_reading = false;
+	curr_booster = 0;
 }
 
 void Cli::init(void)
@@ -388,7 +389,7 @@ int Cli::execute_booster(char **token, char ntokens)
 
 	// here we need at least 2 tokens
 	CLI_TOKEN_AT_LEAST(2);
-	t = parse_token(token[1], &booster);
+	t = parse_token(*++token, &booster);
 
 	// COMMAND: booster list
 	if(t == CLI_TOKEN_LIST) {
@@ -397,16 +398,28 @@ int Cli::execute_booster(char **token, char ntokens)
 		return CLI_ERR_OK;
 	}
 
-	// COMMAND: booster <n> ***
-	if(t != CLI_TOKEN_UINT)
-		return CLI_ERR_BAD_SYNTAX;
-	if(BoosterMngr::booster(booster) == NULL)
-		return CLI_ERR_BAD_BOOSTER;
+	if(t == CLI_TOKEN_UINT) {
+		// COMMAND: booster <n> ***
+		if(BoosterMngr::booster(booster) == NULL)
+			return CLI_ERR_BAD_BOOSTER;
+		if(ntokens == 2) {
+			// COMMAND: booster <n>
+			curr_booster = booster;
+			return CLI_ERR_OK;
+		}
+		token++;
+		// here we need at least 3 tokens
+	} else {
+		// use default booster
+		// COMMAND: booster ***
+		booster = curr_booster;
+		// create a "virtual" token for passing next assertions
+		ntokens++;
+	}
 
-	// here we need at least 3 tokens
 	CLI_TOKEN_AT_LEAST(3);
 
-	switch(parse_token(token[2])) {
+	switch(parse_token(*token++)) {
 	case CLI_TOKEN_RESET:
 		CLI_TOKEN_EXPECTED(3);
 		BoosterMngr::booster(booster)->reset();
@@ -415,7 +428,7 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> power <v>
 	case CLI_TOKEN_POWER:
 		CLI_TOKEN_EXPECTED(4);
-		switch(parse_token(token[3], &si)) {
+		switch(parse_token(*token++, &si)) {
 		case CLI_TOKEN_ON:
 			BoosterMngr::current->on(booster);
 			break;
@@ -444,7 +457,7 @@ int Cli::execute_booster(char **token, char ntokens)
 		CLI_TOKEN_EXPECTED(4);
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(parse_token(token[3])) {
+		switch(parse_token(*token++)) {
 		case CLI_TOKEN_DIRECT:
 			BoosterMngr::booster(booster)->set_mode_direct();
 			break;
@@ -458,7 +471,7 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> acceleration [<a>]
 	case CLI_TOKEN_ACCELERATION:
 		CLI_TOKEN_EXPECTED(4);
-		if(parse_token(token[3], &ui) != CLI_TOKEN_UINT)
+		if(parse_token(*token++, &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
@@ -467,9 +480,9 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> minimum power [<v>]
 	case CLI_TOKEN_MINIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(parse_token(token[3]) != CLI_TOKEN_POWER)
+		if(parse_token(*token++) != CLI_TOKEN_POWER)
 			return CLI_ERR_BAD_SYNTAX;
-		if(parse_token(token[4], &ui) != CLI_TOKEN_UINT)
+		if(parse_token(*token++, &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
@@ -478,11 +491,11 @@ int Cli::execute_booster(char **token, char ntokens)
 	// COMMAND: booster <n> maximum (acceleration|power) [<a>]
 	case CLI_TOKEN_MAXIMUM:
 		CLI_TOKEN_EXPECTED(5);
-		if(parse_token(token[4], &ui) != CLI_TOKEN_UINT)
+		if(parse_token(token[1], &ui) != CLI_TOKEN_UINT)
 			return CLI_ERR_BAD_SYNTAX;
 		if(!pwm.enabled())
 			return CLI_ERR_BAD_MODE;
-		switch(parse_token(token[3])) {
+		switch(parse_token(*token)) {
 		case CLI_TOKEN_ACCELERATION:
 			BoosterMngr::booster(booster)->set_max_accel(ui);
 			break;
@@ -573,6 +586,33 @@ speed:
 	return CLI_ERR_OK;
 }
 
+int Cli::execute_dcc_cmd_light(char **token, char ntokens, bool service_track, uint16_t address)
+{
+	uint16_t speed = 0;
+	int t;
+	bool light = false;
+
+	if(ntokens < 1)
+		return CLI_ERR_NEED_MORE_PARAMS;
+
+	switch(t = parse_token(*token)) {
+	case CLI_TOKEN_ON:
+		light = true;
+		break;
+
+	case CLI_TOKEN_OFF:
+		light = false;
+		break;
+	default:
+		return CLI_ERR_BAD_SYNTAX;
+	}
+
+	if(!dcc.set_light(service_track, address, light))
+		return CLI_ERR_OP_FAILED;
+
+	return CLI_ERR_OK;
+}
+
 // PENDING COMMANDS
 // COMMAND: <<trg_spec>> f <f> (on|off) [acked]
 // COMMAND: <<trg_spec>> analog <f> <v> [acked]
@@ -638,6 +678,9 @@ int Cli::execute_dcc_cmd(char **token, char ntokens)
 	switch(parse_token(*token)) {
 	case CLI_TOKEN_SPEED:
 		return execute_dcc_cmd_speed(token+1, ntokens-1, service_track, address);
+
+	case CLI_TOKEN_LIGHT:
+		return execute_dcc_cmd_light(token+1, ntokens-1, service_track, address);
 
 	default:
 		return CLI_ERR_NOT_IMPLEMENTED;
@@ -794,24 +837,88 @@ ojete:
 			input_del();
 			break;
 		case 27:
-			c = Serial.read();
-			if(c != 79)
+			char x;
+			x = Serial.read();
+			if(x != 79 && x != 91) {
+#ifdef SIMULATOR
+				debug(P("KEY=27 %d (%c)"), x, x);
+#endif
 				goto ojete;
+			}
 			c = Serial.read();
 			switch(c) {
-			case 65: // UP
+			case 65: // 79 - UP
 				break;
-			case 66: // DOWN
+			case 66: // 79 - DOWN
 				break;
-			case 68: // LEFT;
+			case 68: // 79 - LEFT;
 				break;
-			case 67: // RIGHT
+			case 67: // 79 - RIGHT
 				break;
+			case 81: // 79 - F2
+				booster_status(BoosterMngr::booster(curr_booster));
+				break;
+			case 82: // 79 - F3
+				if(curr_booster > 0) {
+					curr_booster--;
+					info(P("Current booster: %d"), curr_booster);
+				}
+				goto current_booster_print;
+			case 83: // 79 - F4
+				if(curr_booster + 1 < BoosterMngr::nboosters) {
+					curr_booster++;
+				}
+				goto current_booster_print;
+			case 49: // 91 - ...
+				switch(c = Serial.read()) {
+				case 53: // F5
+					if((c = Serial.read()) != 126)
+						goto ojete;
+					if(pwm.enabled()) {
+						pwm.accelerate(curr_booster, -20);
+						goto current_booster_print;
+					}
+					break;
+				case 55: // F6
+					if((c = Serial.read()) != 126)
+						goto ojete;
+					if(pwm.enabled()) {
+						pwm.accelerate(curr_booster, 20);
+						goto current_booster_print;
+					}
+					break;
+				case 56: // F7
+					if((c = Serial.read()) != 126)
+						goto ojete;
+					BoosterMngr::current->on(curr_booster);
+					goto current_booster_print;
+					break;
+				case 57: // F8
+					if((c = Serial.read()) != 126)
+						goto ojete;
+					BoosterMngr::current->off(curr_booster);
+					goto current_booster_print;
+					break;
+#ifdef SIMULATOR
+				default:
+					debug(P("KEY=27 91 49 %d (%c)"), c, c);
+#endif
+				}
+				break;
+#ifdef SIMULATOR
 			default:
+				debug(P("KEY=27 %d %d (%c)"), x, c, c);
+#endif
 				goto ojete;
 			}
 			break;
 		case 9:
+			break;
+		current_booster_print:
+			info(P("Booster %d is %s [%d]"),
+				curr_booster,
+				BoosterMngr::booster(curr_booster)->enabled ? "ON" : "OFF",
+				BoosterMngr::booster(curr_booster)->trgt_power);
 			break;
 		default:
 #ifdef SIMULATOR
@@ -820,7 +927,7 @@ ojete:
 			&& !(c >= '0' && c <= '9')
 			&& c != ' ' && c != '-' && c != '+'
 			&& c != '?' && c != '@')
-				SIM_DBG(P("puta=%d (%c)"), c, c);
+				debug(P("KEY=%d (%c)"), c, c);
 #endif
 			input_add(c);
 		}

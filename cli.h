@@ -41,6 +41,8 @@ class Cli {
 		int  input_pos;
 		bool input_reading;
 
+		int  curr_booster;
+
 		// command actions
 		void _print_text(char **text, int l);
 		void about(void);
@@ -66,6 +68,7 @@ class Cli {
 		int execute_dcc(char **token, char ntokens);
 		int execute_dcc_cmd(char **token, char ntokens);
 		int execute_dcc_cmd_speed(char **token, char ntokens, bool service_track, uint16_t address);
+		int execute_dcc_cmd_light(char **token, char ntokens, bool service_track, uint16_t address);
 		int execute(char **token, char ntokens);
 		void parse(char *buffer);
 
