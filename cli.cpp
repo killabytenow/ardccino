@@ -512,7 +512,6 @@ int Cli::execute_booster(char **token, char ntokens)
 	return CLI_ERR_OK;
 }
 
-// COMMAND: <<trg_spec>> speed [4bit|5bit|7bit] [light (on|off)] [+-]<v> [acked]
 int Cli::execute_dcc_cmd_speed(char **token, char ntokens, bool service_track, uint16_t address)
 {
 	uint16_t speed = 0;
@@ -638,7 +637,7 @@ int Cli::execute_dcc_cmd(char **token, char ntokens)
 		return CLI_ERR_NEED_MORE_PARAMS;
 
 	// decide address type
-	if(token[0][0] == '@') {
+	if(token[0][0] == '*') {
 		// broadcast
 		address = DCC_DECO_ADDR_BROADCAST;
 		if(!token[0][1]) {
@@ -677,10 +676,19 @@ int Cli::execute_dcc_cmd(char **token, char ntokens)
 	// process dcc command
 	switch(parse_token(*token)) {
 	case CLI_TOKEN_SPEED:
+		// COMMAND: <<trg_spec>> speed [4bit|5bit|7bit] [light (on|off)] [+-]<v> [acked]
 		return execute_dcc_cmd_speed(token+1, ntokens-1, service_track, address);
 
 	case CLI_TOKEN_LIGHT:
 		return execute_dcc_cmd_light(token+1, ntokens-1, service_track, address);
+
+	case CLI_TOKEN_RESET:
+		// COMMAND: <<trg_spec>> reset
+		return address != DCC_DECO_ADDR_BROADCAST
+			? CLI_ERR_BAD_ADDR
+			: dcc.reset(service_track)
+				? CLI_ERR_OK
+				: CLI_ERR_OP_FAILED;
 
 	default:
 		return CLI_ERR_NOT_IMPLEMENTED;
@@ -718,6 +726,10 @@ int Cli::execute_dcc(char **token, char ntokens)
 		default:
 			return CLI_ERR_BAD_SYNTAX;
 		}
+		break;
+
+	case CLI_TOKEN_STATUS:
+		dcc.status();
 		break;
 
 	default:

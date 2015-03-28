@@ -19,8 +19,10 @@ PWM MODE:
 DCC MODE:
 	dcc
 	dcc address (advanced|normal|auto)
+	dcc status
 
 DCC COMMANDS
+	<<trg_spec>> reset
 	<<trg_spec>> speed [4bit|5bit|7bit] [light (on|off)] <v>
   where:
-    <<trg_spec>>: [@!] (@|[+-]<address>)
+    <<trg_spec>>: [@!] (*|[+-]<address>)

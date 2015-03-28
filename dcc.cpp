@@ -357,35 +357,35 @@ bool DccMngr::set_light(bool service_track, uint16_t address, bool on)
 	return slot_commit(slot);
 }
 
+bool DccMngr::reset(bool service_track)
+{
+	struct dcc_buffer_struct *slot;
+
+	if(!(slot = slot_get(service_track, 0x00)))
+		return false;
+	*(slot->msg + slot->len++) = 0;
+
+	return slot_commit(slot);
+}
+
+void DccMngr::status(void)
+{
+	cli.info(P("DCC msg=%p msg_pending=%d currbit=%d l_id=%d"),
+			operations.msg,
+			operations.msg_pending,
+			operations.dccCurrentBit,
+			operations.dcc_last_msg_id);
+	for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
+		cli.info(P("  pool[%d] = %x %d %d"),
+				i,
+				operations.pool[i].address,
+				operations.pool[i].len,
+				operations.pool[i].reps);
+	}
+}
+
 void DccMngr::refresh(void)
 {
-#if 0
-	static int lolol = 0;
-	if(lolol++ >= 30) {
-		lolol = 0;
-
-		cli.debug(P("DCC msg=%p msg_pending=%d currbit=%d l_id=%d"),
-				operations.msg,
-				operations.msg_pending,
-				operations.dccCurrentBit,
-				operations.dcc_last_msg_id);
-		for(int i = 0; i < DCC_BUFFER_POOL_SIZE; i++) {
-			cli.debug(P("  pool[%d] = %x %d %d"),
-					i,
-					operations.pool[i].address,
-					operations.pool[i].len,
-					operations.pool[i].reps);
-		}
-
-#if 0
-		static int dir = 20;
-		dir = 0 - dir;
-		if(!set_speed(false, DCC_DECO_ADDR_GET7(3), DCC_DECO_SPEED_GET5(5)))
-			cli.debug(P("cannot send speed"));
-#endif
-	}
-#endif
-
 	// warn about excesive latencies
 	if(operations.dcc_excesive_lat) {
 		cli.error(P("operations.dcc_excesive_lat = %d"), operations.dcc_excesive_lat);

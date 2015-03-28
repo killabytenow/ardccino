@@ -164,14 +164,14 @@ DCC decoder, a broadcast address or a set of DCC decoders.
 
 General syntax is:
 
-    [@!] (@|[+-]<address>) ...command...
+    [@!] (*|[+-]<address>) ...command...
 
 Where:
 
   - First character (@ or !) decides if the message is sent to the operations
     track (@) or the service track (!).
 
-  - Second component is the numerical target address. Use @ for broadcasting a
+  - Second component is the numerical target address. Use * for broadcasting a
     message.
 
   - An address can be forced in 7bit (2-digit) or 14bit (4-digit) format using

@@ -34,3 +34,4 @@ CLI_ERR_BAD_BOOSTER          = Unknown booster selected
 CLI_ERR_NOT_IMPLEMENTED      = Feature not implemented yet
 CLI_ERR_OP_FAILED            = Operation failed
 CLI_ERR_OUT_OF_BOUNDS        = Parameter out of bounds
+CLI_ERR_BAD_ADDR             = Bad address
